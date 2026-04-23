@@ -396,12 +396,7 @@ class LSB_Network_Scope_Page {
                 'meta_key'   => sanitize_key($_POST['meta_key'] ?? ''),
                 'meta_value' => sanitize_text_field($_POST['meta_value'] ?? ''),
             ],
-            'patterns'    => [],
         ];
-        foreach (['h1', 'title', 'desc'] as $f) {
-            $raw = $_POST['patterns'][$f] ?? '';
-            $config['patterns'][$f] = wp_kses_post($raw);
-        }
 
         if ($original_id && $original_id !== $scope_id) {
             $this->store->delete_scope($original_id);
