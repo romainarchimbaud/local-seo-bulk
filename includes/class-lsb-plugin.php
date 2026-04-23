@@ -159,6 +159,4 @@ class LSB_Plugin {
 			add_option( 'lsb_site_kill_switch', 0 );
 		}
 	}
-
-	public static function deactivate() {}
 }

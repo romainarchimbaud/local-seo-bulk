@@ -27,6 +27,5 @@ define( 'LSB_BASENAME', plugin_basename( __FILE__ ) );
 require_once LSB_PATH . 'includes/class-lsb-plugin.php';
 
 register_activation_hook( __FILE__, [ 'LSB_Plugin', 'activate' ] );
-register_deactivation_hook( __FILE__, [ 'LSB_Plugin', 'deactivate' ] );
 
 add_action( 'plugins_loaded', [ 'LSB_Plugin', 'instance' ] );
