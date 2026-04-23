@@ -2,12 +2,14 @@
 ( function ( $, wp ) {
 	'use strict';
 
-	var dirtyCount  = 0;
 	var activeField = 'h1';
 
 	function updateDirtyCounter() {
-		var $counter = $( '#lsb-dirty-count' );
-		$counter.text( dirtyCount > 0 ? dirtyCount + ' ' + lsbData.i18n.unsaved : '' );
+		var count = 0;
+		$( '.lsb-value-input' ).each( function () {
+			if ( isInputDirty( $( this ) ) ) count++;
+		} );
+		$( '#lsb-dirty-count' ).text( count > 0 ? count + ' ' + lsbData.i18n.unsaved : '' );
 	}
 
 	function isInputDirty( $input ) {
@@ -19,14 +21,7 @@
 		$row.find( '.lsb-value-input' ).each( function () {
 			if ( isInputDirty( $( this ) ) ) { dirty = true; return false; }
 		} );
-		var wasDirty = $row.hasClass( 'lsb-dirty' );
-		if ( dirty && ! wasDirty ) {
-			$row.addClass( 'lsb-dirty' );
-			dirtyCount++;
-		} else if ( ! dirty && wasDirty ) {
-			$row.removeClass( 'lsb-dirty' );
-			dirtyCount = Math.max( 0, dirtyCount - 1 );
-		}
+		$row.toggleClass( 'lsb-dirty', dirty );
 	}
 
 	$( function () {
@@ -105,7 +100,6 @@
 					$( this ).data( 'initial-value', $( this ).val() );
 				} );
 				$row.removeClass( 'lsb-dirty' );
-				dirtyCount = Math.max( 0, dirtyCount - 1 );
 				updateDirtyCounter();
 				var $activeInput = $row.find( '.lsb-field-panel[data-field="' + activeField + '"] .lsb-value-input' );
 				if ( $activeInput.length && $activeInput.val() ) {
@@ -153,7 +147,6 @@
 					$( this ).data( 'initial-value', $( this ).val() );
 				} );
 				$row.removeClass( 'lsb-dirty' );
-				dirtyCount = Math.max( 0, dirtyCount - 1 );
 				updateDirtyCounter();
 			} else {
 				$status.addClass( 'error' ).text( lsbData.i18n.error );
@@ -249,12 +242,11 @@
 		function finish() {
 			done++;
 			if ( done >= total ) {
-				$( '.lsb-dirty' ).removeClass( 'lsb-dirty' );
-				dirtyCount = 0;
-				updateDirtyCounter();
 				$( '.lsb-value-input' ).each( function () {
 					$( this ).data( 'initial-value', $( this ).val() );
 				} );
+				$( '.lsb-dirty' ).removeClass( 'lsb-dirty' );
+				updateDirtyCounter();
 				$btn.prop( 'disabled', false ).text( $btn.data( 'original-text' ) || lsbData.i18n.saved );
 			}
 		}

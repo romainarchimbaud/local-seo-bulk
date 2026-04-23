@@ -12,19 +12,22 @@ class LSB_Ajax {
 	private $network_store;
 	private $scope_matcher;
 	private $resolver;
+	private $entity_index;
 
 	public function __construct(
 		LSB_Meta_Store $meta_store,
 		LSB_Token_Resolver $token_resolver,
 		LSB_Network_Store $network_store,
 		LSB_Scope_Matcher $scope_matcher,
-		LSB_Resolver $resolver
+		LSB_Resolver $resolver,
+		LSB_Network_Entity_Index $entity_index
 	) {
 		$this->meta_store     = $meta_store;
 		$this->token_resolver = $token_resolver;
 		$this->network_store  = $network_store;
 		$this->scope_matcher  = $scope_matcher;
 		$this->resolver       = $resolver;
+		$this->entity_index   = $entity_index;
 	}
 
 	public function register() {
@@ -253,15 +256,60 @@ class LSB_Ajax {
 		if ( ! current_user_can( 'manage_options' ) ) wp_die( 'Forbidden' );
 		check_ajax_referer( 'lsb_ajax_nonce', 'nonce' );
 
-		$type = sanitize_key( $_GET['lsb_object'] ?? '' );
+		$lsb_object = sanitize_text_field( wp_unslash( $_GET['lsb_object'] ?? '' ) );
+		$parts      = explode( '|', $lsb_object, 2 );
+		$kind       = $parts[0] ?? '';
+		$type_slug  = isset( $parts[1] ) ? sanitize_key( $parts[1] ) : '';
+		$fname      = sanitize_file_name( str_replace( '|', '-', $lsb_object ) );
 
 		header( 'Content-Type: text/csv; charset=utf-8' );
-		header( 'Content-Disposition: attachment; filename="lsb-import-' . $type . '.csv"' );
+		header( 'Content-Disposition: attachment; filename="lsb-import-' . $fname . '.csv"' );
 		header( 'Pragma: no-cache' );
 
 		$out = fopen( 'php://output', 'w' );
 		fputcsv( $out, [ 'slug', 'h1', 'title', 'desc' ] );
-		fputcsv( $out, [ '# exemple-slug', 'Mon H1 %%lsb_ville%%', 'Mon titre | %%sitename%%', 'Ma description.' ] );
+
+		$objects = [];
+		if ( 'post_type' === $kind && $type_slug ) {
+			$objects = get_posts( [
+				'post_type'      => $type_slug,
+				'post_status'    => 'publish',
+				'posts_per_page' => 500,
+				'no_found_rows'  => true,
+				'orderby'        => 'title',
+				'order'          => 'ASC',
+			] );
+		} elseif ( 'taxonomy' === $kind && $type_slug ) {
+			$objects = get_terms( [ 'taxonomy' => $type_slug, 'hide_empty' => false, 'number' => 500, 'orderby' => 'name', 'order' => 'ASC' ] );
+			if ( is_wp_error( $objects ) ) $objects = [];
+		} elseif ( 'scope' === $kind && $type_slug ) {
+			$scopes = $this->network_store->get_scopes();
+			$scope  = $scopes[ $type_slug ] ?? null;
+			if ( $scope ) {
+				$objects = $this->scope_matcher->find_matching_objects( $scope, 500 );
+			}
+		}
+
+		if ( empty( $objects ) ) {
+			fputcsv( $out, [ '# exemple-slug', 'Mon H1 %%lsb_ville%%', 'Mon titre | %%sitename%%', 'Ma description.' ] );
+		} else {
+			foreach ( $objects as $obj ) {
+				if ( $obj instanceof WP_Post ) {
+					$slug   = $obj->post_name;
+					$entity = [ 'type' => 'post', 'id' => $obj->ID ];
+				} else {
+					$slug   = $obj->slug;
+					$entity = [ 'type' => 'term', 'id' => $obj->term_id ];
+				}
+				fputcsv( $out, [
+					$slug,
+					$this->meta_store->get( $entity, 'h1' ) ?: '',
+					$this->meta_store->get( $entity, 'title' ) ?: '',
+					$this->meta_store->get( $entity, 'desc' ) ?: '',
+				] );
+			}
+		}
+
 		fclose( $out );
 		exit;
 	}
@@ -274,9 +322,29 @@ class LSB_Ajax {
 		header( 'Content-Disposition: attachment; filename="lsb-network-import.csv"' );
 		header( 'Pragma: no-cache' );
 
-		$out = fopen( 'php://output', 'w' );
+		$out   = fopen( 'php://output', 'w' );
+		$index = $this->entity_index->get_index();
+
 		fputcsv( $out, [ 'scope_id', 'slug', 'h1', 'title', 'desc' ] );
-		fputcsv( $out, [ '# produits-parents', 'exemple-slug', 'Mon H1 %%lsb_ville%%', 'Mon titre | %%sitename%%', 'Ma description.' ] );
+
+		$has_rows = false;
+		foreach ( $index as $scope_id => $rows ) {
+			foreach ( $rows as $slug => $row ) {
+				fputcsv( $out, [
+					$scope_id,
+					$slug,
+					$this->network_store->get_entity_value( $scope_id, $slug, 'h1' ) ?: '',
+					$this->network_store->get_entity_value( $scope_id, $slug, 'title' ) ?: '',
+					$this->network_store->get_entity_value( $scope_id, $slug, 'desc' ) ?: '',
+				] );
+				$has_rows = true;
+			}
+		}
+
+		if ( ! $has_rows ) {
+			fputcsv( $out, [ '# produits-parents', 'exemple-slug', 'Mon H1 %%lsb_ville%%', 'Mon titre | %%sitename%%', 'Ma description.' ] );
+		}
+
 		fclose( $out );
 		exit;
 	}

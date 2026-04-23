@@ -22,13 +22,15 @@ class LSB_Network_Scope_Page {
 
     public function init() {
         add_action('network_admin_menu', [$this, 'register_menu']);
-        add_action('admin_post_lsb_save_scope',       [$this, 'handle_save_scope']);
-        add_action('admin_post_lsb_delete_scope',     [$this, 'handle_delete_scope']);
-        add_action('admin_post_lsb_refresh_cpt_index', [$this, 'handle_refresh_cpt_index']);
+        add_action('admin_post_lsb_save_scope',         [$this, 'handle_save_scope']);
+        add_action('admin_post_lsb_delete_scope',       [$this, 'handle_delete_scope']);
+        add_action('admin_post_lsb_bulk_delete_scopes', [$this, 'handle_bulk_delete_scopes']);
+        add_action('admin_post_lsb_refresh_cpt_index',  [$this, 'handle_refresh_cpt_index']);
+        add_filter('set_screen_option_lsb_items_per_page', [$this, 'save_screen_option'], 10, 3);
     }
 
     public function register_menu() {
-        add_menu_page(
+        $hook = add_menu_page(
             __('SEO Masse', 'local-seo-bulk'),
             __('SEO Masse', 'local-seo-bulk'),
             'manage_network_options',
@@ -37,6 +39,8 @@ class LSB_Network_Scope_Page {
             'dashicons-location-alt',
             80
         );
+        add_action('load-' . $hook, [$this, 'add_screen_options']);
+
         add_submenu_page(
             self::PAGE_SLUG,
             __('Scopes', 'local-seo-bulk'),
@@ -45,6 +49,18 @@ class LSB_Network_Scope_Page {
             self::PAGE_SLUG,
             [$this, 'render_page']
         );
+    }
+
+    public function add_screen_options() {
+        add_screen_option('per_page', [
+            'label'   => __('Scopes par page', 'local-seo-bulk'),
+            'default' => 50,
+            'option'  => 'lsb_items_per_page',
+        ]);
+    }
+
+    public function save_screen_option($screen_option, $option, $value) {
+        return (int) $value;
     }
 
     public function render_page() {
@@ -60,80 +76,184 @@ class LSB_Network_Scope_Page {
     }
 
     private function render_list() {
-        $scopes       = $this->store->get_scopes();
-        $entity_vals  = $this->store->get_all_entity_values();
-        $base         = network_admin_url('admin.php?page=' . self::PAGE_SLUG);
+        $all_scopes  = $this->store->get_scopes();
+        $entity_vals = $this->store->get_all_entity_values();
+        $base        = network_admin_url('admin.php?page=' . self::PAGE_SLUG);
+
+        $per_page     = (int) get_user_meta(get_current_user_id(), 'lsb_items_per_page', true);
+        if ($per_page < 1) $per_page = 50;
+        $total_scopes = count($all_scopes);
+        $total_pages  = max(1, (int) ceil($total_scopes / $per_page));
+        $current_page = max(1, min($total_pages, (int) ($_GET['paged'] ?? 1)));
+        $scopes       = array_slice($all_scopes, ($current_page - 1) * $per_page, $per_page, true);
 ?>
         <div class="wrap">
-            <h1><?php esc_html_e('SEO Masse — Scopes réseau', 'local-seo-bulk'); ?>
-                <a href="<?php echo esc_url(add_query_arg('action', 'add', $base)); ?>" class="page-title-action"><?php esc_html_e('Ajouter un scope', 'local-seo-bulk'); ?></a>
-            </h1>
-            <p class="description"><?php esc_html_e('Définissez les scopes (ensembles d\'entités) et leurs patterns SEO par défaut. Chaque site pourra surcharger localement.', 'local-seo-bulk'); ?></p>
+            <h1 class="wp-heading-inline"><?php esc_html_e('SEO Masse — Scopes réseau', 'local-seo-bulk'); ?></h1>
+            <a href="<?php echo esc_url(add_query_arg('action', 'add', $base)); ?>" class="page-title-action"><?php esc_html_e('Ajouter un scope', 'local-seo-bulk'); ?></a>
+            <hr class="wp-header-end">
 
             <?php if (isset($_GET['saved'])) : ?>
-                <div class="notice notice-success is-dismissible">
-                    <p><?php esc_html_e('Scope enregistré.', 'local-seo-bulk'); ?></p>
-                </div>
+                <div class="notice notice-success is-dismissible"><p><?php esc_html_e('Scope enregistré.', 'local-seo-bulk'); ?></p></div>
             <?php endif; ?>
-            <?php if (isset($_GET['deleted'])) : ?>
-                <div class="notice notice-success is-dismissible">
-                    <p><?php esc_html_e('Scope supprimé.', 'local-seo-bulk'); ?></p>
-                </div>
+            <?php if (isset($_GET['deleted']) || isset($_GET['bulk_deleted'])) : ?>
+                <div class="notice notice-success is-dismissible"><p><?php esc_html_e('Scope(s) supprimé(s).', 'local-seo-bulk'); ?></p></div>
             <?php endif; ?>
 
-            <table class="wp-list-table widefat fixed striped">
-                <thead>
-                    <tr>
-                        <th><?php esc_html_e('ID', 'local-seo-bulk'); ?></th>
-                        <th><?php esc_html_e('Libellé', 'local-seo-bulk'); ?></th>
-                        <th><?php esc_html_e('Type', 'local-seo-bulk'); ?></th>
-                        <th><?php esc_html_e('Slug', 'local-seo-bulk'); ?></th>
-                        <th><?php esc_html_e('Filtre', 'local-seo-bulk'); ?></th>
-                        <th><?php esc_html_e('Entités réseau', 'local-seo-bulk'); ?></th>
-                        <th><?php esc_html_e('Actions', 'local-seo-bulk'); ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($scopes)) : ?>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" id="lsb-scopes-form">
+                <input type="hidden" name="action" value="lsb_bulk_delete_scopes">
+                <?php wp_nonce_field('lsb_bulk_delete_scopes'); ?>
+
+                <div class="tablenav top">
+                    <div class="alignleft actions bulkactions">
+                        <label for="bulk-action-selector-top" class="screen-reader-text"><?php esc_html_e('Choisir une action groupée', 'local-seo-bulk'); ?></label>
+                        <select name="bulk_action" id="bulk-action-selector-top">
+                            <option value="-1"><?php esc_html_e('Actions groupées', 'local-seo-bulk'); ?></option>
+                            <option value="delete"><?php esc_html_e('Supprimer', 'local-seo-bulk'); ?></option>
+                        </select>
+                        <input type="submit" class="button action" value="<?php esc_attr_e('Appliquer', 'local-seo-bulk'); ?>">
+                    </div>
+                    <div class="tablenav-pages <?php echo $total_pages <= 1 ? 'one-page' : ''; ?>">
+                        <span class="displaying-num"><?php echo esc_html(sprintf(_n('%d scope', '%d scopes', $total_scopes, 'local-seo-bulk'), $total_scopes)); ?></span>
+                        <?php if ($total_pages > 1) :
+                            echo wp_kses_post(paginate_links([
+                                'base'      => add_query_arg('paged', '%#%', $base),
+                                'format'    => '',
+                                'current'   => $current_page,
+                                'total'     => $total_pages,
+                                'prev_text' => '&laquo;',
+                                'next_text' => '&raquo;',
+                            ]));
+                        endif; ?>
+                    </div>
+                    <br class="clear">
+                </div>
+
+                <table class="wp-list-table widefat fixed striped">
+                    <thead>
                         <tr>
-                            <td colspan="7"><?php esc_html_e('Aucun scope configuré.', 'local-seo-bulk'); ?></td>
+                            <td class="manage-column column-cb check-column">
+                                <label class="screen-reader-text" for="cb-select-all"><?php esc_html_e('Tout sélectionner', 'local-seo-bulk'); ?></label>
+                                <input id="cb-select-all" type="checkbox">
+                            </td>
+                            <th class="manage-column"><?php esc_html_e('ID', 'local-seo-bulk'); ?></th>
+                            <th class="manage-column"><?php esc_html_e('Libellé', 'local-seo-bulk'); ?></th>
+                            <th class="manage-column"><?php esc_html_e('Type', 'local-seo-bulk'); ?></th>
+                            <th class="manage-column"><?php esc_html_e('Slug CPT/Taxo', 'local-seo-bulk'); ?></th>
+                            <th class="manage-column"><?php esc_html_e('Filtre', 'local-seo-bulk'); ?></th>
+                            <th class="manage-column"><?php esc_html_e('Entités réseau', 'local-seo-bulk'); ?></th>
                         </tr>
-                        <?php else : foreach ($scopes as $id => $scope) : ?>
+                    </thead>
+                    <tbody id="the-list">
+                        <?php if (empty($scopes)) : ?>
                             <tr>
-                                <td><code><?php echo esc_html($id); ?></code></td>
+                                <td colspan="7"><?php esc_html_e('Aucun scope configuré.', 'local-seo-bulk'); ?></td>
+                            </tr>
+                        <?php else : foreach ($scopes as $id => $scope) :
+                            $edit_url   = add_query_arg('edit', $id, $base);
+                            $delete_url = wp_nonce_url(admin_url('admin-post.php?action=lsb_delete_scope&scope_id=' . $id), 'lsb_delete_scope_' . $id);
+                            $f          = $scope['filter'];
+                            $count      = isset($entity_vals[$id]) ? count($entity_vals[$id]) : 0;
+                        ?>
+                            <tr>
+                                <th class="check-column">
+                                    <label class="screen-reader-text" for="cb-select-<?php echo esc_attr($id); ?>"><?php echo esc_html($id); ?></label>
+                                    <input id="cb-select-<?php echo esc_attr($id); ?>" type="checkbox" name="scope_ids[]" value="<?php echo esc_attr($id); ?>">
+                                </th>
+                                <td class="column-primary">
+                                    <strong><a href="<?php echo esc_url($edit_url); ?>"><code><?php echo esc_html($id); ?></code></a></strong>
+                                    <div class="row-actions">
+                                        <span class="edit"><a href="<?php echo esc_url($edit_url); ?>"><?php esc_html_e('Modifier', 'local-seo-bulk'); ?></a> | </span>
+                                        <span class="delete"><a href="<?php echo esc_url($delete_url); ?>" onclick="return confirm('<?php esc_attr_e('Supprimer ce scope ?', 'local-seo-bulk'); ?>');" class="submitdelete"><?php esc_html_e('Supprimer', 'local-seo-bulk'); ?></a></span>
+                                    </div>
+                                </td>
                                 <td><?php echo esc_html($scope['label']); ?></td>
-                                <td><?php echo esc_html($scope['object_kind']); ?></td>
+                                <td><?php echo esc_html('post_type' === $scope['object_kind'] ? __('Post type', 'local-seo-bulk') : __('Taxonomie', 'local-seo-bulk')); ?></td>
                                 <td><code><?php echo esc_html($scope['slug']); ?></code></td>
                                 <td>
                                     <?php
-                                    $f = $scope['filter'];
                                     echo esc_html($f['type']);
                                     if ('custom_meta' === $f['type']) {
-                                        echo ' (' . esc_html($f['meta_key']) . '=' . esc_html($f['meta_value']) . ')';
+                                        echo ' <small>(' . esc_html($f['meta_key']) . '=' . esc_html($f['meta_value']) . ')</small>';
                                     }
                                     ?>
                                 </td>
-                                <td>
-                                    <?php
-                                    $count = isset($entity_vals[$id]) ? count($entity_vals[$id]) : 0;
-                                    echo esc_html($count);
-                                    ?>
-                                </td>
-                                <td>
-                                    <a href="<?php echo esc_url(add_query_arg('edit', $id, $base)); ?>"><?php esc_html_e('Modifier', 'local-seo-bulk'); ?></a>
-                                    | <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=lsb_delete_scope&scope_id=' . $id), 'lsb_delete_scope_' . $id)); ?>" onclick="return confirm('<?php esc_attr_e('Supprimer ce scope ?', 'local-seo-bulk'); ?>');"><?php esc_html_e('Supprimer', 'local-seo-bulk'); ?></a>
-                                </td>
+                                <td><?php echo esc_html($count); ?></td>
                             </tr>
-                    <?php endforeach;
-                    endif; ?>
-                </tbody>
-            </table>
+                        <?php endforeach; endif; ?>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td class="manage-column column-cb check-column">
+                                <input id="cb-select-all-2" type="checkbox">
+                            </td>
+                            <th class="manage-column"><?php esc_html_e('ID', 'local-seo-bulk'); ?></th>
+                            <th class="manage-column"><?php esc_html_e('Libellé', 'local-seo-bulk'); ?></th>
+                            <th class="manage-column"><?php esc_html_e('Type', 'local-seo-bulk'); ?></th>
+                            <th class="manage-column"><?php esc_html_e('Slug CPT/Taxo', 'local-seo-bulk'); ?></th>
+                            <th class="manage-column"><?php esc_html_e('Filtre', 'local-seo-bulk'); ?></th>
+                            <th class="manage-column"><?php esc_html_e('Entités réseau', 'local-seo-bulk'); ?></th>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <div class="tablenav bottom">
+                    <div class="alignleft actions bulkactions">
+                        <select name="bulk_action_bottom">
+                            <option value="-1"><?php esc_html_e('Actions groupées', 'local-seo-bulk'); ?></option>
+                            <option value="delete"><?php esc_html_e('Supprimer', 'local-seo-bulk'); ?></option>
+                        </select>
+                        <input type="submit" class="button action" value="<?php esc_attr_e('Appliquer', 'local-seo-bulk'); ?>">
+                    </div>
+                    <?php if ($total_pages > 1) : ?>
+                    <div class="tablenav-pages">
+                        <span class="displaying-num"><?php echo esc_html(sprintf(_n('%d scope', '%d scopes', $total_scopes, 'local-seo-bulk'), $total_scopes)); ?></span>
+                        <?php echo wp_kses_post(paginate_links([
+                            'base'      => add_query_arg('paged', '%#%', $base),
+                            'format'    => '',
+                            'current'   => $current_page,
+                            'total'     => $total_pages,
+                            'prev_text' => '&laquo;',
+                            'next_text' => '&raquo;',
+                        ])); ?>
+                    </div>
+                    <?php endif; ?>
+                    <br class="clear">
+                </div>
+            </form>
 
             <p style="margin-top:1em;">
                 <a href="<?php echo esc_url(network_admin_url('admin.php?page=lsb-network-editor')); ?>" class="button"><?php esc_html_e('Aller à l\'éditeur réseau →', 'local-seo-bulk'); ?></a>
                 <a href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=lsb_refresh_cpt_index'), 'lsb_refresh_cpt_index')); ?>" class="button"><?php esc_html_e('Rafraîchir la liste des CPT/taxos', 'local-seo-bulk'); ?></a>
             </p>
         </div>
+
+        <script>
+        (function() {
+            function syncCheckboxes(source, targets) {
+                targets.forEach(function(cb) { cb.checked = source.checked; });
+            }
+            var all1 = document.getElementById('cb-select-all');
+            var all2 = document.getElementById('cb-select-all-2');
+            var rows = Array.from(document.querySelectorAll('input[name="scope_ids[]"]'));
+            if (all1) {
+                all1.addEventListener('change', function() { syncCheckboxes(this, rows); if (all2) all2.checked = this.checked; });
+            }
+            if (all2) {
+                all2.addEventListener('change', function() { syncCheckboxes(this, rows); if (all1) all1.checked = this.checked; });
+            }
+            // Handle bottom bulk action select (mirror to top before submit)
+            var form = document.getElementById('lsb-scopes-form');
+            var topAction   = document.querySelector('select[name="bulk_action"]');
+            var bottomAction = document.querySelector('select[name="bulk_action_bottom"]');
+            if (form && bottomAction) {
+                form.addEventListener('submit', function() {
+                    if (bottomAction.value !== '-1' && topAction) {
+                        topAction.value = bottomAction.value;
+                    }
+                });
+            }
+        }());
+        </script>
     <?php
     }
 
@@ -292,6 +412,24 @@ class LSB_Network_Scope_Page {
         delete_site_transient(LSB_Network_Entity_Index::TRANSIENT);
 
         wp_safe_redirect(network_admin_url('admin.php?page=' . self::PAGE_SLUG . '&saved=1'));
+        exit;
+    }
+
+    public function handle_bulk_delete_scopes() {
+        if (! current_user_can('manage_network_options')) wp_die('Forbidden');
+        check_admin_referer('lsb_bulk_delete_scopes');
+
+        $action    = sanitize_key($_POST['bulk_action'] ?? '-1');
+        $scope_ids = array_map('sanitize_key', (array) ($_POST['scope_ids'] ?? []));
+
+        if ('delete' === $action && ! empty($scope_ids)) {
+            foreach ($scope_ids as $scope_id) {
+                $this->store->delete_scope($scope_id);
+            }
+            delete_site_transient(LSB_Network_Entity_Index::TRANSIENT);
+        }
+
+        wp_safe_redirect(network_admin_url('admin.php?page=' . self::PAGE_SLUG . '&bulk_deleted=1'));
         exit;
     }
 

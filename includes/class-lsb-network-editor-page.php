@@ -27,10 +27,11 @@ class LSB_Network_Editor_Page {
 
 	public function init() {
 		add_action( 'network_admin_menu', [ $this, 'register_menu' ] );
+		add_filter( 'set_screen_option_lsb_items_per_page', [ $this, 'save_screen_option' ], 10, 3 );
 	}
 
 	public function register_menu() {
-		add_submenu_page(
+		$hook = add_submenu_page(
 			LSB_Network_Scope_Page::PAGE_SLUG,
 			__( 'Éditeur réseau', 'local-seo-bulk' ),
 			__( 'Éditeur', 'local-seo-bulk' ),
@@ -38,6 +39,19 @@ class LSB_Network_Editor_Page {
 			self::PAGE_SLUG,
 			[ $this, 'render_page' ]
 		);
+		add_action( 'load-' . $hook, [ $this, 'add_screen_options' ] );
+	}
+
+	public function add_screen_options() {
+		add_screen_option( 'per_page', [
+			'label'   => __( 'Éléments par page', 'local-seo-bulk' ),
+			'default' => 50,
+			'option'  => 'lsb_items_per_page',
+		] );
+	}
+
+	public function save_screen_option( $screen_option, $option, $value ) {
+		return (int) $value;
 	}
 
 	public function render_page() {
@@ -72,7 +86,6 @@ class LSB_Network_Editor_Page {
 		<div class="wrap lsb-editor-wrap">
 			<h1 class="wp-heading-inline"><?php esc_html_e( 'Éditeur SEO réseau', 'local-seo-bulk' ); ?>
 				<a href="<?php echo esc_url( add_query_arg( [ 'action' => 'lsb_refresh_entity_index', '_wpnonce' => wp_create_nonce( 'lsb_refresh_entity_index' ) ], admin_url( 'admin-post.php' ) ) ); ?>" class="page-title-action"><?php esc_html_e( 'Rafraîchir l\'index', 'local-seo-bulk' ); ?></a>
-				<button type="button" class="page-title-action" id="lsb-open-network-import"><?php esc_html_e( 'Importer CSV', 'local-seo-bulk' ); ?></button>
 			</h1>
 			<hr class="wp-header-end">
 
@@ -96,6 +109,7 @@ class LSB_Network_Editor_Page {
 
 			<script>
 			( function( $ ) {
+				$( function() {
 				$( '#lsb-open-network-import' ).on( 'click', function() {
 					$( '#lsb-network-import-dialog' ).toggle();
 				} );
@@ -131,6 +145,7 @@ class LSB_Network_Editor_Page {
 						$( '#lsb-do-network-import' ).prop( 'disabled', false );
 					} );
 				} );
+			} ); // document ready
 			} )( jQuery );
 			</script>
 
@@ -149,15 +164,23 @@ class LSB_Network_Editor_Page {
 					<?php endforeach; ?>
 				</nav>
 				<div class="lsb-scope-actions">
+					<button type="button" class="button" id="lsb-open-network-import"><?php esc_html_e( 'Importer CSV', 'local-seo-bulk' ); ?></button>
 					<button type="button" class="button button-primary" id="lsb-save-all"><?php esc_html_e( 'Tout enregistrer', 'local-seo-bulk' ); ?></button>
 					<span class="lsb-dirty-count" id="lsb-dirty-count"></span>
 				</div>
 			</div>
 
 			<?php
-			$rows         = isset( $index[ $active_scope ] ) ? $index[ $active_scope ] : [];
+			$all_rows     = isset( $index[ $active_scope ] ) ? $index[ $active_scope ] : [];
 			$scope_config = $scopes[ $active_scope ];
 			$field_labels = [ 'h1' => 'H1', 'title' => 'Meta title', 'desc' => 'Meta description' ];
+
+			$per_page     = (int) get_user_meta( get_current_user_id(), 'lsb_items_per_page', true );
+			if ( $per_page < 1 ) $per_page = 50;
+			$total_rows   = count( $all_rows );
+			$total_pages  = max( 1, (int) ceil( $total_rows / $per_page ) );
+			$current_page = max( 1, min( $total_pages, (int) ( $_GET['paged'] ?? 1 ) ) );
+			$rows         = array_slice( $all_rows, ( $current_page - 1 ) * $per_page, $per_page, true );
 			?>
 
 			<form id="lsb-editor-form" method="post">
@@ -175,7 +198,19 @@ class LSB_Network_Editor_Page {
 						<?php endforeach; ?>
 					</nav>
 					<div class="lsb-field-meta">
-						<?php echo esc_html( sprintf( _n( '%d entité', '%d entités', count( $rows ), 'local-seo-bulk' ), count( $rows ) ) ); ?>
+						<?php echo esc_html( sprintf( _n( '%d entité', '%d entités', $total_rows, 'local-seo-bulk' ), $total_rows ) ); ?>
+						<?php if ( $total_pages > 1 ) : ?>
+						&nbsp;—&nbsp;
+						<?php echo wp_kses_post( paginate_links( [
+							'base'      => add_query_arg( 'paged', '%#%', network_admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&lsb_scope=' . $active_scope . '&lsb_tab=' . $active_field ) ),
+							'format'    => '',
+							'current'   => $current_page,
+							'total'     => $total_pages,
+							'prev_text' => '&laquo;',
+							'next_text' => '&raquo;',
+							'type'      => 'plain',
+						] ) ); ?>
+						<?php endif; ?>
 					</div>
 				</div>
 

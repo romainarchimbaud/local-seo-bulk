@@ -74,12 +74,11 @@ class LSB_Plugin {
 		$this->shortcodes        = new LSB_Shortcodes( $this->meta_store, $this->resolver );
 		$this->yoast_integration = new LSB_Yoast_Integration( $this->resolver );
 		$this->h1_replacer       = new LSB_H1_Replacer( $this->resolver );
-		$this->ajax              = new LSB_Ajax( $this->meta_store, $this->token_resolver, $this->network_store, $this->scope_matcher, $this->resolver );
-		$this->editor_page       = new LSB_Editor_Page( $this->meta_store, $this->token_resolver, $this->network_store, $this->scope_matcher, $this->resolver );
-		$this->admin_menu        = new LSB_Admin_Menu( $this->settings, $this->editor_page );
-
 		$this->network_cpt_index    = new LSB_Network_CPT_Index();
 		$this->network_entity_index = new LSB_Network_Entity_Index( $this->network_store, $this->scope_matcher );
+		$this->ajax              = new LSB_Ajax( $this->meta_store, $this->token_resolver, $this->network_store, $this->scope_matcher, $this->resolver, $this->network_entity_index );
+		$this->editor_page       = new LSB_Editor_Page( $this->meta_store, $this->token_resolver, $this->network_store, $this->scope_matcher, $this->resolver );
+		$this->admin_menu        = new LSB_Admin_Menu( $this->settings, $this->editor_page );
 		$this->network_scope_page   = new LSB_Network_Scope_Page( $this->network_store, $this->network_cpt_index );
 		$this->network_editor_page  = new LSB_Network_Editor_Page( $this->network_store, $this->network_entity_index, $this->token_resolver );
 	}
@@ -101,7 +100,8 @@ class LSB_Plugin {
 		$this->admin_menu->init();
 		$this->settings->init();
 
-		add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_assets' ] );
+		add_action( 'admin_enqueue_scripts',         [ $this, 'enqueue_admin_assets' ] );
+		add_action( 'network_admin_enqueue_scripts',  [ $this, 'enqueue_admin_assets' ] );
 	}
 
 	public function enqueue_admin_assets( $hook ) {

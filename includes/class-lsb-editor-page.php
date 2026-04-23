@@ -153,11 +153,11 @@ class LSB_Editor_Page {
 				</form>
 
 				<div class="lsb-bulk-actions">
-					<button type="button" class="button button-primary" id="lsb-save-all"><?php esc_html_e( 'Tout enregistrer', 'local-seo-bulk' ); ?></button>
-					<span class="lsb-dirty-count" id="lsb-dirty-count"></span>
 					<?php if ( $active_object_value ) : ?>
 					<button type="button" class="button" id="lsb-open-import"><?php esc_html_e( 'Importer CSV', 'local-seo-bulk' ); ?></button>
 					<?php endif; ?>
+					<button type="button" class="button button-primary" id="lsb-save-all"><?php esc_html_e( 'Tout enregistrer', 'local-seo-bulk' ); ?></button>
+					<span class="lsb-dirty-count" id="lsb-dirty-count"></span>
 				</div>
 			</div>
 

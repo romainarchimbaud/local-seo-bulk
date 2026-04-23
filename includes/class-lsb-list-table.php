@@ -79,7 +79,8 @@ class LSB_List_Table extends WP_List_Table {
 
 	public function prepare_items() {
 		$this->_column_headers = [ $this->get_columns(), [], $this->get_sortable_columns() ];
-		$per_page     = 50;
+		$per_page     = (int) get_user_meta( get_current_user_id(), 'lsb_items_per_page', true );
+		if ( $per_page < 1 ) $per_page = 50;
 		$current_page = $this->get_pagenum();
 		$total        = count( $this->all_entities );
 		$this->set_pagination_args( [ 'total_items' => $total, 'per_page' => $per_page ] );
