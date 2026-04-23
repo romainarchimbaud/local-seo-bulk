@@ -31,8 +31,8 @@ class LSB_Network_Scope_Page {
 
     public function register_menu() {
         $hook = add_menu_page(
-            __('SEO Masse', 'local-seo-bulk'),
-            __('SEO Masse', 'local-seo-bulk'),
+            __('SEO Masse Editor', 'local-seo-bulk'),
+            __('SEO Masse Editor', 'local-seo-bulk'),
             'manage_network_options',
             self::PAGE_SLUG,
             [$this, 'render_page'],
@@ -88,7 +88,7 @@ class LSB_Network_Scope_Page {
         $scopes       = array_slice($all_scopes, ($current_page - 1) * $per_page, $per_page, true);
 ?>
         <div class="wrap">
-            <h1 class="wp-heading-inline"><?php esc_html_e('SEO Masse — Scopes réseau', 'local-seo-bulk'); ?></h1>
+            <h1 class="wp-heading-inline"><?php esc_html_e('SEO Masse Editor: Scopes réseau', 'local-seo-bulk'); ?></h1>
             <a href="<?php echo esc_url(add_query_arg('action', 'add', $base)); ?>" class="page-title-action"><?php esc_html_e('Ajouter un scope', 'local-seo-bulk'); ?></a>
             <hr class="wp-header-end">
 
