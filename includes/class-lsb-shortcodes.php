@@ -9,6 +9,7 @@ class LSB_Shortcodes {
 
 	private $meta_store;
 	private $resolver;
+	private $address = null;
 
 	public function __construct( LSB_Meta_Store $meta_store, LSB_Resolver $resolver ) {
 		$this->meta_store = $meta_store;
@@ -23,17 +24,17 @@ class LSB_Shortcodes {
 	}
 
 	public function shortcode_ville( $atts ) {
-		$address = get_option( 'lsb_address', [] );
+		$address = $this->get_address();
 		return esc_html( $address['ville'] ?? '' );
 	}
 
 	public function shortcode_code_postal( $atts ) {
-		$address = get_option( 'lsb_address', [] );
+		$address = $this->get_address();
 		return esc_html( $address['code_postal'] ?? '' );
 	}
 
 	public function shortcode_adresse( $atts ) {
-		$address = get_option( 'lsb_address', [] );
+		$address = $this->get_address();
 		return esc_html( $address['adresse'] ?? '' );
 	}
 
@@ -42,5 +43,12 @@ class LSB_Shortcodes {
 		if ( ! $post instanceof WP_Post ) return '';
 		$h1 = $this->resolver->resolve_full( $post, 'h1' );
 		return esc_html( $h1 );
+	}
+
+	private function get_address() {
+		if ( null === $this->address ) {
+			$this->address = get_option( 'lsb_address', [] );
+		}
+		return $this->address;
 	}
 }

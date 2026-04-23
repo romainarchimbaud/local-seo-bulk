@@ -8,6 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 class LSB_Yoast_Integration {
 
 	private $resolver;
+	private $address = null;
 
 	public function __construct( LSB_Resolver $resolver ) {
 		$this->resolver = $resolver;
@@ -25,17 +26,17 @@ class LSB_Yoast_Integration {
 		if ( ! function_exists( 'wpseo_register_var_replacement' ) ) return;
 
 		wpseo_register_var_replacement( '%%lsb_ville%%', function() {
-			$a = get_option( 'lsb_address', [] );
+			$a = $this->get_address();
 			return $a['ville'] ?? '';
 		}, 'advanced', __( 'Ville (Local SEO Bulk)', 'local-seo-bulk' ) );
 
 		wpseo_register_var_replacement( '%%lsb_code_postal%%', function() {
-			$a = get_option( 'lsb_address', [] );
+			$a = $this->get_address();
 			return $a['code_postal'] ?? '';
 		}, 'advanced', __( 'Code postal (Local SEO Bulk)', 'local-seo-bulk' ) );
 
 		wpseo_register_var_replacement( '%%lsb_adresse%%', function() {
-			$a = get_option( 'lsb_address', [] );
+			$a = $this->get_address();
 			return $a['adresse'] ?? '';
 		}, 'advanced', __( 'Adresse (Local SEO Bulk)', 'local-seo-bulk' ) );
 	}
@@ -58,5 +59,12 @@ class LSB_Yoast_Integration {
 
 	private function is_killed() {
 		return ! empty( get_option( 'lsb_site_kill_switch', 0 ) );
+	}
+
+	private function get_address() {
+		if ( null === $this->address ) {
+			$this->address = get_option( 'lsb_address', [] );
+		}
+		return $this->address;
 	}
 }

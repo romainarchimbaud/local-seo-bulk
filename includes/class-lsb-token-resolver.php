@@ -7,12 +7,14 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 class LSB_Token_Resolver {
 
+	private $address = null;
+
 	public function resolve( $raw, $context = null ) {
 		if ( empty( $raw ) ) return $raw;
 
 		$value = do_shortcode( $raw );
 
-		$address     = get_option( 'lsb_address', [] );
+		$address     = $this->get_address();
 		$ville       = ! empty( $address['ville'] )       ? $address['ville']       : '';
 		$code_postal = ! empty( $address['code_postal'] ) ? $address['code_postal'] : '';
 		$adresse     = ! empty( $address['adresse'] )     ? $address['adresse']     : '';
@@ -88,5 +90,12 @@ class LSB_Token_Resolver {
 			return isset( $map[ $sep_key ] ) ? $map[ $sep_key ] : '-';
 		}
 		return '-';
+	}
+
+	private function get_address() {
+		if ( null === $this->address ) {
+			$this->address = get_option( 'lsb_address', [] );
+		}
+		return $this->address;
 	}
 }
