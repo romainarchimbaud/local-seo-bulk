@@ -1,0 +1,20 @@
+# Dependencies
+vendor/
+node_modules/
+
+# Build artifacts
+*.zip
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# WordPress
+*.log
