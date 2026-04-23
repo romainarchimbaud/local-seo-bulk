@@ -123,7 +123,7 @@ class LSB_Ajax {
 		}
 
 		if ( '' === $value ) {
-			$this->network_store->delete_entity_slug( $scope_id, $slug );
+			$this->network_store->delete_entity_field( $scope_id, $slug, $field );
 			wp_send_json_success( [ 'message' => __( 'Valeur réseau effacée.', 'local-seo-bulk' ) ] );
 		}
 
@@ -147,7 +147,7 @@ class LSB_Ajax {
 			$value    = sanitize_text_field( wp_unslash( $row['value'] ?? '' ) );
 			if ( ! $scope_id || ! $slug || ! $field ) continue;
 			if ( '' === $value ) {
-				$this->network_store->delete_entity_slug( $scope_id, $slug );
+				$this->network_store->delete_entity_field( $scope_id, $slug, $field );
 			} else {
 				$this->network_store->set_entity_value( $scope_id, $slug, $field, $value );
 			}

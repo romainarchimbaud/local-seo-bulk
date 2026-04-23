@@ -102,6 +102,17 @@ class LSB_Network_Store {
 		}
 	}
 
+	public function delete_entity_field( $scope_id, $slug, $field ) {
+		if ( ! in_array( $field, self::FIELDS, true ) ) return;
+		$values = $this->get_all_entity_values();
+		if ( ! isset( $values[ $scope_id ][ $slug ] ) ) return;
+		unset( $values[ $scope_id ][ $slug ][ $field ] );
+		if ( empty( $values[ $scope_id ][ $slug ] ) ) {
+			unset( $values[ $scope_id ][ $slug ] );
+		}
+		update_site_option( self::OPT_ENTITY_VALUES, $values );
+	}
+
 	// ---- Sanitization ----
 
 	private function sanitize_scope( $config ) {
