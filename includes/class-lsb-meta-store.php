@@ -11,6 +11,9 @@ class LSB_Meta_Store {
 
 	// Map field name to meta key
 	private function meta_key( $field ) {
+		if ( ! in_array( $field, self::FIELDS, true ) ) {
+			return null;
+		}
 		return '_lsb_' . $field;
 	}
 
@@ -21,6 +24,9 @@ class LSB_Meta_Store {
 	 */
 	public function get( $entity, $field ) {
 		$key = $this->meta_key( $field );
+		if ( null === $key ) {
+			return false;
+		}
 		if ( 'post' === $entity['type'] ) {
 			return get_post_meta( $entity['id'], $key, true );
 		}
@@ -32,6 +38,9 @@ class LSB_Meta_Store {
 
 	public function update( $entity, $field, $value ) {
 		$key = $this->meta_key( $field );
+		if ( null === $key ) {
+			return false;
+		}
 		if ( 'post' === $entity['type'] ) {
 			return update_post_meta( $entity['id'], $key, $value );
 		}
@@ -43,6 +52,9 @@ class LSB_Meta_Store {
 
 	public function delete( $entity, $field ) {
 		$key = $this->meta_key( $field );
+		if ( null === $key ) {
+			return false;
+		}
 		if ( 'post' === $entity['type'] ) {
 			return delete_post_meta( $entity['id'], $key );
 		}
