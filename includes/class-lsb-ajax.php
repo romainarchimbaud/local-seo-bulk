@@ -427,23 +427,23 @@ class LSB_Ajax {
 	}
 
 	private function validate_csv_mime_type( $file_path, $filename = '' ) {
-		// Use finfo to detect actual MIME type from file content
+		// Always require .csv extension — text/plain is too broad to trust alone.
+		if ( $filename && strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) ) !== 'csv' ) {
+			return false;
+		}
+
+		// Use finfo to verify content-level MIME type.
 		if ( function_exists( 'finfo_open' ) ) {
 			$finfo = finfo_open( FILEINFO_MIME_TYPE );
 			if ( $finfo ) {
 				$mime_type = finfo_file( $finfo, $file_path );
 				finfo_close( $finfo );
-				// Accept text/csv, text/plain, and application/csv
 				$valid_types = [ 'text/csv', 'text/plain', 'application/csv' ];
 				return in_array( $mime_type, $valid_types, true );
 			}
 		}
 
-		// Fallback: check file extension if finfo unavailable
-		if ( $filename ) {
-			return strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) ) === 'csv';
-		}
-
-		return false;
+		// finfo unavailable and extension already passed above.
+		return true;
 	}
 }
