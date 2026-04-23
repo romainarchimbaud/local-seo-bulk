@@ -191,9 +191,10 @@ class LSB_Ajax {
 		}
 
 		$file = $_FILES['lsb_csv']['tmp_name'];
+		$filename = isset( $_FILES['lsb_csv']['name'] ) ? sanitize_file_name( $_FILES['lsb_csv']['name'] ) : '';
 
 		// Validate CSV MIME type
-		if ( ! $this->validate_csv_mime_type( $file ) ) {
+		if ( ! $this->validate_csv_mime_type( $file, $filename ) ) {
 			wp_send_json_error( [ 'message' => __( 'Le fichier doit être un fichier CSV valide.', 'local-seo-bulk' ) ] );
 		}
 
@@ -363,9 +364,10 @@ class LSB_Ajax {
 		}
 
 		$file = $_FILES['lsb_csv']['tmp_name'];
+		$filename = isset( $_FILES['lsb_csv']['name'] ) ? sanitize_file_name( $_FILES['lsb_csv']['name'] ) : '';
 
 		// Validate CSV MIME type
-		if ( ! $this->validate_csv_mime_type( $file ) ) {
+		if ( ! $this->validate_csv_mime_type( $file, $filename ) ) {
 			wp_send_json_error( [ 'message' => __( 'Le fichier doit être un fichier CSV valide.', 'local-seo-bulk' ) ] );
 		}
 
@@ -424,7 +426,7 @@ class LSB_Ajax {
 		}
 	}
 
-	private function validate_csv_mime_type( $file_path ) {
+	private function validate_csv_mime_type( $file_path, $filename = '' ) {
 		// Use finfo to detect actual MIME type from file content
 		if ( function_exists( 'finfo_open' ) ) {
 			$finfo = finfo_open( FILEINFO_MIME_TYPE );
@@ -438,7 +440,6 @@ class LSB_Ajax {
 		}
 
 		// Fallback: check file extension if finfo unavailable
-		$filename = isset( $_FILES['lsb_csv']['name'] ) ? sanitize_file_name( $_FILES['lsb_csv']['name'] ) : '';
 		if ( $filename ) {
 			return strtolower( pathinfo( $filename, PATHINFO_EXTENSION ) ) === 'csv';
 		}
