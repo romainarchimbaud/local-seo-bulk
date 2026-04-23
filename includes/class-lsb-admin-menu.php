@@ -22,8 +22,8 @@ class LSB_Admin_Menu {
 
 	public function register_menus() {
 		$hook = add_menu_page(
-			__( 'SEO Masse', 'local-seo-bulk' ),
-			__( 'SEO Masse', 'local-seo-bulk' ),
+			__( 'SEO Masse Editor', 'local-seo-bulk' ),
+			__( 'SEO Masse Editor', 'local-seo-bulk' ),
 			'manage_options',
 			'lsb-editor',
 			[ $this->editor_page, 'render_page' ],
