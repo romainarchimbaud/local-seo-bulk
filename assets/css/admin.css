@@ -61,7 +61,7 @@
 /* Tabs + pagination bar */
 .lsb-tabs-bar {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: space-between;
     border-bottom: 1px solid #c3c4c7;
     margin-bottom: 0;
@@ -73,6 +73,10 @@
     flex: 1;
 }
 
+.lsb-tabs-bar .lsb-tab-header.nav-tab-wrapper .nav-tab {
+    padding: 8px 12px;
+}
+
 .lsb-tabs-bar .tablenav.top {
     flex-shrink: 0;
     border: none;
@@ -80,6 +84,7 @@
     padding: 0 0 6px 1em;
     height: auto;
     overflow: visible;
+    align-self: flex-end;
 }
 
 .lsb-tabs-bar .tablenav.top::after {
@@ -93,6 +98,18 @@
 .lsb-tabs-bar .tablenav-pages {
     float: none;
     margin: 0;
+}
+
+.lsb-tabs-bar .lsb-bulk-bar {
+    flex-shrink: 0;
+    float: none;
+    padding: 0 8px 6px 0;
+    align-self: flex-end;
+}
+
+/* Force consistent checkbox margin on both site and network tables */
+.wp-list-table .check-column input[type=checkbox] {
+    margin: 1px 8px 0;
 }
 
 #lsb-editor-form .wp-list-table {

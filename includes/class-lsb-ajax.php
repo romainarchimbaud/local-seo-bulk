@@ -198,6 +198,7 @@ class LSB_Ajax {
 			wp_send_json_error( [ 'message' => __( 'Le fichier doit être un fichier CSV valide.', 'local-seo-bulk' ) ] );
 		}
 
+		$delimiter = $this->detect_csv_delimiter( $file );
 		$fh = fopen( $file, 'r' );
 		if ( ! $fh ) {
 			wp_send_json_error( [ 'message' => __( 'Impossible de lire le fichier.', 'local-seo-bulk' ) ] );
@@ -208,29 +209,45 @@ class LSB_Ajax {
 		$errors   = [];
 		$line_num = 0;
 
-		while ( ( $row = fgetcsv( $fh ) ) !== false ) {
+		while ( ( $row = fgetcsv( $fh, 0, $delimiter ) ) !== false ) {
 			$line_num++;
 			if ( 1 === $line_num ) continue; // skip header
 			if ( empty( $row[0] ) || str_starts_with( trim( $row[0] ), '#' ) ) continue;
 
-			$slug  = sanitize_title( trim( $row[0] ) );
+			$slug  = trim( $row[0] );
 			$h1    = isset( $row[1] ) ? sanitize_text_field( wp_unslash( trim( $row[1] ) ) ) : '';
 			$title = isset( $row[2] ) ? sanitize_text_field( wp_unslash( trim( $row[2] ) ) ) : '';
 			$desc  = isset( $row[3] ) ? sanitize_text_field( wp_unslash( trim( $row[3] ) ) ) : '';
 
 			$object = null;
 			if ( 'post_type' === $kind ) {
-				$posts = get_posts( [
-					'post_type'      => $type_slug,
-					'name'           => $slug,
-					'posts_per_page' => 1,
-					'post_status'    => 'publish',
-					'no_found_rows'  => true,
-				] );
-				$object = ! empty( $posts ) ? $posts[0] : null;
+				if ( str_starts_with( $slug, '/' ) ) {
+					// URL path slug (new format): resolve via url_to_postid
+					$parsed  = wp_parse_url( network_home_url() );
+					$origin  = $parsed['scheme'] . '://' . $parsed['host'];
+					if ( ! empty( $parsed['port'] ) ) $origin .= ':' . $parsed['port'];
+					$post_id = url_to_postid( $origin . '/' . ltrim( $slug, '/' ) );
+					if ( $post_id ) {
+						$p = get_post( $post_id );
+						if ( $p && $p->post_type === $type_slug && $p->post_status === 'publish' ) {
+							$object = $p;
+						}
+					}
+				} else {
+					// Legacy: bare post_name slug
+					$posts = get_posts( [
+						'post_type'      => $type_slug,
+						'name'           => sanitize_title( $slug ),
+						'posts_per_page' => 1,
+						'post_status'    => 'publish',
+						'no_found_rows'  => true,
+					] );
+					$object = ! empty( $posts ) ? $posts[0] : null;
+				}
 			} elseif ( 'taxonomy' === $kind ) {
-				$term   = get_term_by( 'slug', $slug, $type_slug );
-				$object = $term ?: null;
+				$term_slug = str_starts_with( $slug, '/' ) ? basename( rtrim( $slug, '/' ) ) : sanitize_title( $slug );
+				$term      = get_term_by( 'slug', $term_slug, $type_slug );
+				$object    = $term ?: null;
 			}
 
 			if ( ! $object ) {
@@ -302,11 +319,13 @@ class LSB_Ajax {
 		} else {
 			foreach ( $objects as $obj ) {
 				if ( $obj instanceof WP_Post ) {
-					$slug   = $obj->post_name;
-					$entity = [ 'type' => 'post', 'id' => $obj->ID ];
+					$permalink = get_permalink( $obj );
+					$slug      = $permalink ? wp_parse_url( $permalink, PHP_URL_PATH ) : $obj->post_name;
+					$entity    = [ 'type' => 'post', 'id' => $obj->ID ];
 				} else {
-					$slug   = $obj->slug;
-					$entity = [ 'type' => 'term', 'id' => $obj->term_id ];
+					$term_link = get_term_link( $obj );
+					$slug      = ! is_wp_error( $term_link ) ? wp_parse_url( $term_link, PHP_URL_PATH ) : $obj->slug;
+					$entity    = [ 'type' => 'term', 'id' => $obj->term_id ];
 				}
 				fputcsv( $out, [
 					$slug,
@@ -371,6 +390,7 @@ class LSB_Ajax {
 			wp_send_json_error( [ 'message' => __( 'Le fichier doit être un fichier CSV valide.', 'local-seo-bulk' ) ] );
 		}
 
+		$delimiter = $this->detect_csv_delimiter( $file );
 		$fh = fopen( $file, 'r' );
 		if ( ! $fh ) {
 			wp_send_json_error( [ 'message' => __( 'Impossible de lire le fichier.', 'local-seo-bulk' ) ] );
@@ -379,9 +399,10 @@ class LSB_Ajax {
 		$imported = 0;
 		$skipped  = 0;
 		$errors   = [];
+		$rows     = [];
 		$line_num = 0;
 
-		while ( ( $row = fgetcsv( $fh ) ) !== false ) {
+		while ( ( $row = fgetcsv( $fh, 0, $delimiter ) ) !== false ) {
 			$line_num++;
 			if ( 1 === $line_num ) continue; // skip header
 			if ( empty( $row[0] ) || str_starts_with( trim( $row[0] ), '#' ) ) continue;
@@ -402,6 +423,11 @@ class LSB_Ajax {
 			if ( '' !== $title ) $this->network_store->set_entity_value( $scope_id, $slug, 'title', $title );
 			if ( '' !== $desc  ) $this->network_store->set_entity_value( $scope_id, $slug, 'desc',  $desc  );
 
+			$rows[] = [
+				'scope_id' => $scope_id,
+				'slug'     => $slug,
+				'fields'   => [ 'h1' => $h1, 'title' => $title, 'desc' => $desc ],
+			];
 			$imported++;
 		}
 
@@ -411,10 +437,18 @@ class LSB_Ajax {
 			'imported' => $imported,
 			'skipped'  => $skipped,
 			'errors'   => $errors,
+			'rows'     => $rows,
 		] );
 	}
 
 	// ---- Helpers ----
+
+	private function detect_csv_delimiter( $file ) {
+		$fh   = fopen( $file, 'r' );
+		$line = fgets( $fh );
+		fclose( $fh );
+		return ( substr_count( $line, ';' ) > substr_count( $line, ',' ) ) ? ';' : ',';
+	}
 
 	private function verify_nonce( $network = false ) {
 		$cap = $network ? 'manage_network_options' : 'manage_options';

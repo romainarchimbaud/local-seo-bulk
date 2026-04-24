@@ -206,6 +206,42 @@
 		} );
 	} );
 
+	// ---- Bulk "Vider" — site-level (intercept WP bulk action form submit) ----
+	$( document ).on( 'submit', '#lsb-editor-form', function ( e ) {
+		var top    = $( 'select[name="action"]' ).val()  || '-1';
+		var bottom = $( 'select[name="action2"]' ).val() || '-1';
+		var action = top !== '-1' ? top : bottom;
+		if ( action !== 'lsb_bulk_clear' ) return;
+		e.preventDefault();
+		$( 'input[name="lsb_item[]"]:checked' ).closest( 'tr' ).each( function () {
+			var $row = $( this );
+			$row.find( '.lsb-value-input[data-field="' + activeField + '"]' ).val( '' );
+			$row.find( '.lsb-field-panel[data-field="' + activeField + '"] .lsb-preview' ).text( '' );
+			reconcileRowDirty( $row );
+		} );
+		$( 'input[name="lsb_item[]"]' ).prop( 'checked', false );
+		$( '#cb-select-all-1, #cb-select-all-2' ).prop( 'checked', false );
+		updateDirtyCounter();
+	} );
+
+	// ---- Bulk "Vider" — network-level ----
+	$( document ).on( 'click', '#lsb-bulk-apply-net', function () {
+		if ( $( '#lsb-bulk-action-net' ).val() !== 'lsb_bulk_clear' ) return;
+		$( 'input[name="lsb_net_item[]"]:checked' ).closest( 'tr' ).each( function () {
+			var $row = $( this );
+			$row.find( '.lsb-network-input[data-field="' + activeField + '"]' ).val( '' );
+			reconcileRowDirty( $row );
+		} );
+		$( 'input[name="lsb_net_item[]"]' ).prop( 'checked', false );
+		$( '#cb-select-all-net' ).prop( 'checked', false );
+		updateDirtyCounter();
+	} );
+
+	// ---- Select all — network-level ----
+	$( document ).on( 'change', '#cb-select-all-net', function () {
+		$( 'input[name="lsb_net_item[]"]' ).prop( 'checked', $( this ).is( ':checked' ) );
+	} );
+
 	// ---- Save all dirty inputs (all fields, all rows) ----
 	$( document ).on( 'click', '#lsb-save-all', function () {
 		var $btn        = $( this );

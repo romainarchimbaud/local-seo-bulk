@@ -174,7 +174,7 @@ class LSB_Editor_Page {
                                 <?php esc_html_e('Télécharger le modèle CSV', 'local-seo-bulk'); ?>
                             </a>
                         </p>
-                        <input type="file" id="lsb-csv-file" accept=".csv" style="display:block;margin:1em 0">
+                        <input type="file" id="lsb-csv-file" accept=".csv" style="display:block;margin:1.5em 0.5em;">
                         <input type="hidden" id="lsb-import-object" value="<?php echo esc_attr($active_object_value); ?>">
                         <input type="hidden" id="lsb-import-nonce" value="<?php echo esc_attr(wp_create_nonce('lsb_ajax_nonce')); ?>">
                         <button type="button" class="button button-primary" id="lsb-do-import"><?php esc_html_e('Importer', 'local-seo-bulk'); ?></button>
@@ -186,8 +186,9 @@ class LSB_Editor_Page {
                 <form id="lsb-editor-form" method="post">
                     <?php wp_nonce_field('lsb_ajax_nonce', 'lsb_nonce', true); ?>
 
-                    <!-- Tabs + pagination on same line -->
+                    <!-- Bulk left | Tabs center | Pagination right -->
                     <div class="lsb-tabs-bar">
+                        <?php $table->render_bulk_bar(); ?>
                         <nav class="nav-tab-wrapper lsb-tab-header">
                             <?php foreach ($field_tabs as $fk => $fl) : ?>
                                 <a href="<?php echo esc_url(add_query_arg(['lsb_object' => $active_object_value, 'lsb_tab' => $fk], $base_url)); ?>"
@@ -197,8 +198,11 @@ class LSB_Editor_Page {
                                 </a>
                             <?php endforeach; ?>
                         </nav>
-                        <?php $table->render_top_nav(); ?>
+                        <div class="tablenav top">
+                            <?php $table->render_pag_bar(); ?>
+                        </div>
                     </div>
+                    <?php $table->mark_top_rendered(); ?>
 
                     <?php $table->display(); ?>
                 </form>
@@ -233,10 +237,20 @@ class LSB_Editor_Page {
                                 contentType: false,
                             }).done(function(resp) {
                                 if (resp.success) {
-                                    $('#lsb-import-result').text(
-                                        <?php echo json_encode(__('Importé : ', 'local-seo-bulk')); ?> + resp.data.imported +
-                                        <?php echo json_encode(__(' — Ignoré : ', 'local-seo-bulk')); ?> + resp.data.skipped
-                                    );
+                                    var msg = <?php echo json_encode(__('Importé : ', 'local-seo-bulk')); ?> + resp.data.imported +
+                                        <?php echo json_encode(__(' — Ignoré : ', 'local-seo-bulk')); ?> + resp.data.skipped;
+                                    if (resp.data.errors && resp.data.errors.length) {
+                                        msg += '\n' + resp.data.errors.slice(0, 5).join('\n');
+                                        if (resp.data.errors.length > 5) {
+                                            msg += '\n' + <?php echo json_encode(__('…et ', 'local-seo-bulk')); ?> + (resp.data.errors.length - 5) + <?php echo json_encode(__(' autres.', 'local-seo-bulk')); ?>;
+                                        }
+                                    }
+                                    $('#lsb-import-result').css('white-space', 'pre-line').text(msg);
+                                    if (resp.data.imported > 0) {
+                                        setTimeout(function() {
+                                            location.reload();
+                                        }, 800);
+                                    }
                                 } else {
                                     $('#lsb-import-result').text(resp.data.message || <?php echo json_encode(__('Erreur.', 'local-seo-bulk')); ?>);
                                 }

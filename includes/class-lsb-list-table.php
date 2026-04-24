@@ -42,6 +42,7 @@ class LSB_List_Table extends WP_List_Table {
 
 	public function get_columns() {
 		return [
+			'cb'              => '<input type="checkbox">',
 			'entity_title'    => __( 'Titre', 'local-seo-bulk' ),
 			'entity_slug'     => __( 'Slug', 'local-seo-bulk' ),
 			'entity_type'     => __( 'Type', 'local-seo-bulk' ),
@@ -52,22 +53,41 @@ class LSB_List_Table extends WP_List_Table {
 		];
 	}
 
+	public function get_bulk_actions() {
+		return [ 'lsb_bulk_clear' => __( 'Vider', 'local-seo-bulk' ) ];
+	}
+
+	public function column_cb( $item ) {
+		$entity = $item['entity'];
+		return sprintf(
+			'<input type="checkbox" name="lsb_item[]" value="%s:%d">',
+			esc_attr( $entity['type'] ),
+			(int) $entity['id']
+		);
+	}
+
 	public function get_sortable_columns() { return []; }
 
-	/**
-	 * Render the top tablenav (item count + pagination) separately, before the tabs.
-	 * Calling this marks the top nav as already rendered so display() skips it.
-	 */
-	public function render_top_nav() {
-		$this->top_nav_rendered  = true;
-		$this->rendering_top_nav = true;
-		$this->display_tablenav( 'top' );
-		$this->rendering_top_nav = false;
+	/** Renders just the bulk action select + Apply button (flex item, LEFT of tabs). */
+	public function render_bulk_bar() {
+		if ( empty( $this->get_bulk_actions() ) ) return;
+		echo '<div class="alignleft actions bulkactions lsb-bulk-bar">';
+		$this->bulk_actions( 'top' );
+		echo '</div>';
+	}
+
+	/** Renders just the pagination (flex item, RIGHT of tabs). */
+	public function render_pag_bar() {
+		$this->pagination( 'top' );
+	}
+
+	/** Prevents display() from re-rendering the top tablenav. */
+	public function mark_top_rendered() {
+		$this->top_nav_rendered = true;
 	}
 
 	protected function display_tablenav( $which ) {
-		// Skip inside display() once already rendered separately
-		if ( 'top' === $which && $this->top_nav_rendered && ! $this->rendering_top_nav ) {
+		if ( 'top' === $which && $this->top_nav_rendered ) {
 			return;
 		}
 		parent::display_tablenav( $which );
