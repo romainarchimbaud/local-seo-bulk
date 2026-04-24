@@ -213,9 +213,13 @@ class LSB_Settings {
 					<?php settings_fields( 'lsb_h1_force_types_group' ); ?>
 
 					<?php
-					$force_types    = get_option( 'lsb_h1_force_types', [] );
-					$active_pt      = $enabled_pt;
-					$active_tax     = $enabled_tax;
+					$force_types_saved = get_option( 'lsb_h1_force_types', false );
+					$active_pt         = $enabled_pt;
+					$active_tax        = $enabled_tax;
+					// Default: all active types checked when option has never been saved.
+					$force_types = ( false !== $force_types_saved )
+						? $force_types_saved
+						: array_merge( $active_pt, $active_tax );
 					?>
 
 					<?php if ( ! empty( $active_pt ) ) : ?>

@@ -197,20 +197,9 @@ class LSB_Network_Editor_Page {
 							</a>
 						<?php endforeach; ?>
 					</nav>
-					<div class="lsb-field-meta">
-						<?php echo esc_html( sprintf( _n( '%d entité', '%d entités', $total_rows, 'local-seo-bulk' ), $total_rows ) ); ?>
-						<?php if ( $total_pages > 1 ) : ?>
-						&nbsp;—&nbsp;
-						<?php echo wp_kses_post( paginate_links( [
-							'base'      => add_query_arg( 'paged', '%#%', network_admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&lsb_scope=' . $active_scope . '&lsb_tab=' . $active_field ) ),
-							'format'    => '',
-							'current'   => $current_page,
-							'total'     => $total_pages,
-							'prev_text' => '&laquo;',
-							'next_text' => '&raquo;',
-							'type'      => 'plain',
-						] ) ); ?>
-						<?php endif; ?>
+					<div class="tablenav top">
+						<?php $this->render_pagination( $current_page, $total_pages, $total_rows, $active_scope, $active_field ); ?>
+						<br class="clear">
 					</div>
 				</div>
 
@@ -289,5 +278,61 @@ class LSB_Network_Editor_Page {
 			</form>
 		</div>
 		<?php
+	}
+
+	private function render_pagination( $current_page, $total_pages, $total_rows, $active_scope, $active_field ) {
+		$base  = network_admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&lsb_scope=' . $active_scope . '&lsb_tab=' . $active_field );
+		$class = $total_pages <= 1 ? ' one-page' : '';
+		echo '<div class="tablenav-pages' . $class . '">';
+		echo '<span class="displaying-num">' . esc_html( sprintf( _n( '%d entité', '%d entités', $total_rows, 'local-seo-bulk' ), $total_rows ) ) . '</span>';
+
+		if ( $total_pages > 1 ) {
+			$links = [];
+
+			if ( 1 === $current_page ) {
+				$links[] = '<span class="tablenav-pages-navspan button disabled" aria-hidden="true">&laquo;</span>';
+				$links[] = '<span class="tablenav-pages-navspan button disabled" aria-hidden="true">&lsaquo;</span>';
+			} else {
+				$links[] = sprintf(
+					'<a class="first-page button" href="%s"><span class="screen-reader-text">%s</span><span aria-hidden="true">&laquo;</span></a>',
+					esc_url( $base ),
+					__( 'First page' )
+				);
+				$links[] = sprintf(
+					'<a class="prev-page button" href="%s"><span class="screen-reader-text">%s</span><span aria-hidden="true">&lsaquo;</span></a>',
+					esc_url( add_query_arg( 'paged', max( 1, $current_page - 1 ), $base ) ),
+					__( 'Previous page' )
+				);
+			}
+
+			$links[] = sprintf(
+				'<span class="paging-input"><label for="current-page-selector" class="screen-reader-text">%s</label><input class="current-page" id="current-page-selector" type="text" name="paged" value="%d" size="%d" aria-describedby="table-paging"><span class="tablenav-paging-text"> %s <span class="total-pages">%d</span></span></span>',
+				__( 'Current Page' ),
+				$current_page,
+				strlen( (string) $total_pages ),
+				_x( 'of', 'paging' ),
+				$total_pages
+			);
+
+			if ( $current_page === $total_pages ) {
+				$links[] = '<span class="tablenav-pages-navspan button disabled" aria-hidden="true">&rsaquo;</span>';
+				$links[] = '<span class="tablenav-pages-navspan button disabled" aria-hidden="true">&raquo;</span>';
+			} else {
+				$links[] = sprintf(
+					'<a class="next-page button" href="%s"><span class="screen-reader-text">%s</span><span aria-hidden="true">&rsaquo;</span></a>',
+					esc_url( add_query_arg( 'paged', min( $total_pages, $current_page + 1 ), $base ) ),
+					__( 'Next page' )
+				);
+				$links[] = sprintf(
+					'<a class="last-page button" href="%s"><span class="screen-reader-text">%s</span><span aria-hidden="true">&raquo;</span></a>',
+					esc_url( add_query_arg( 'paged', $total_pages, $base ) ),
+					__( 'Last page' )
+				);
+			}
+
+			echo '<span class="pagination-links">' . implode( "\n", $links ) . '</span>';
+		}
+
+		echo '</div>';
 	}
 }

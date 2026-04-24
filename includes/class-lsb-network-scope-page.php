@@ -112,19 +112,7 @@ class LSB_Network_Scope_Page {
                         </select>
                         <input type="submit" class="button action" value="<?php esc_attr_e('Appliquer', 'local-seo-bulk'); ?>">
                     </div>
-                    <div class="tablenav-pages <?php echo $total_pages <= 1 ? 'one-page' : ''; ?>">
-                        <span class="displaying-num"><?php echo esc_html(sprintf(_n('%d scope', '%d scopes', $total_scopes, 'local-seo-bulk'), $total_scopes)); ?></span>
-                        <?php if ($total_pages > 1) :
-                            echo wp_kses_post(paginate_links([
-                                'base'      => add_query_arg('paged', '%#%', $base),
-                                'format'    => '',
-                                'current'   => $current_page,
-                                'total'     => $total_pages,
-                                'prev_text' => '&laquo;',
-                                'next_text' => '&raquo;',
-                            ]));
-                        endif; ?>
-                    </div>
+                    <?php $this->render_pagination( 'top', $current_page, $total_pages, $total_scopes, $base ); ?>
                     <br class="clear">
                 </div>
 
@@ -204,19 +192,7 @@ class LSB_Network_Scope_Page {
                         </select>
                         <input type="submit" class="button action" value="<?php esc_attr_e('Appliquer', 'local-seo-bulk'); ?>">
                     </div>
-                    <?php if ($total_pages > 1) : ?>
-                    <div class="tablenav-pages">
-                        <span class="displaying-num"><?php echo esc_html(sprintf(_n('%d scope', '%d scopes', $total_scopes, 'local-seo-bulk'), $total_scopes)); ?></span>
-                        <?php echo wp_kses_post(paginate_links([
-                            'base'      => add_query_arg('paged', '%#%', $base),
-                            'format'    => '',
-                            'current'   => $current_page,
-                            'total'     => $total_pages,
-                            'prev_text' => '&laquo;',
-                            'next_text' => '&raquo;',
-                        ])); ?>
-                    </div>
-                    <?php endif; ?>
+                    <?php $this->render_pagination( 'bottom', $current_page, $total_pages, $total_scopes, $base ); ?>
                     <br class="clear">
                 </div>
             </form>
@@ -255,6 +231,71 @@ class LSB_Network_Scope_Page {
         }());
         </script>
     <?php
+    }
+
+    private function render_pagination( $which, $current_page, $total_pages, $total_scopes, $base ) {
+        $class = $total_pages <= 1 ? ' one-page' : '';
+        echo '<div class="tablenav-pages' . $class . '">';
+        echo '<span class="displaying-num">' . esc_html( sprintf( _n( '%d scope', '%d scopes', $total_scopes, 'local-seo-bulk' ), $total_scopes ) ) . '</span>';
+
+        if ( $total_pages > 1 ) {
+            $links = [];
+
+            if ( 1 === $current_page ) {
+                $links[] = '<span class="tablenav-pages-navspan button disabled" aria-hidden="true">&laquo;</span>';
+                $links[] = '<span class="tablenav-pages-navspan button disabled" aria-hidden="true">&lsaquo;</span>';
+            } else {
+                $links[] = sprintf(
+                    '<a class="first-page button" href="%s"><span class="screen-reader-text">%s</span><span aria-hidden="true">&laquo;</span></a>',
+                    esc_url( remove_query_arg( 'paged', $base ) ),
+                    __( 'First page' )
+                );
+                $links[] = sprintf(
+                    '<a class="prev-page button" href="%s"><span class="screen-reader-text">%s</span><span aria-hidden="true">&lsaquo;</span></a>',
+                    esc_url( add_query_arg( 'paged', max( 1, $current_page - 1 ), $base ) ),
+                    __( 'Previous page' )
+                );
+            }
+
+            if ( 'top' === $which ) {
+                $links[] = sprintf(
+                    '<span class="paging-input"><label for="current-page-selector" class="screen-reader-text">%s</label><input class="current-page" id="current-page-selector" type="text" name="paged" value="%d" size="%d" aria-describedby="table-paging"><span class="tablenav-paging-text"> %s <span class="total-pages">%d</span></span></span>',
+                    __( 'Current Page' ),
+                    $current_page,
+                    strlen( (string) $total_pages ),
+                    _x( 'of', 'paging' ),
+                    $total_pages
+                );
+            } else {
+                $links[] = sprintf(
+                    '<span class="screen-reader-text">%s</span><span id="table-paging" class="paging-input"><span class="tablenav-paging-text">%d %s <span class="total-pages">%d</span></span></span>',
+                    __( 'Current Page' ),
+                    $current_page,
+                    _x( 'of', 'paging' ),
+                    $total_pages
+                );
+            }
+
+            if ( $current_page === $total_pages ) {
+                $links[] = '<span class="tablenav-pages-navspan button disabled" aria-hidden="true">&rsaquo;</span>';
+                $links[] = '<span class="tablenav-pages-navspan button disabled" aria-hidden="true">&raquo;</span>';
+            } else {
+                $links[] = sprintf(
+                    '<a class="next-page button" href="%s"><span class="screen-reader-text">%s</span><span aria-hidden="true">&rsaquo;</span></a>',
+                    esc_url( add_query_arg( 'paged', min( $total_pages, $current_page + 1 ), $base ) ),
+                    __( 'Next page' )
+                );
+                $links[] = sprintf(
+                    '<a class="last-page button" href="%s"><span class="screen-reader-text">%s</span><span aria-hidden="true">&raquo;</span></a>',
+                    esc_url( add_query_arg( 'paged', $total_pages, $base ) ),
+                    __( 'Last page' )
+                );
+            }
+
+            echo '<span class="pagination-links">' . implode( "\n", $links ) . '</span>';
+        }
+
+        echo '</div>';
     }
 
     private function render_form($scope_id) {
