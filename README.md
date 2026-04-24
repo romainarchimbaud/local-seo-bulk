@@ -2,7 +2,7 @@
 
 Plugin WordPress d'édition en masse des champs SEO (H1, meta title, meta description) par entité, avec système de tokens géolocalisés et support multisite.
 
-**Version :** 0.2.0 | **WordPress :** 6.0+ | **PHP :** 7.4+ | **Réseau :** oui
+**Version :** 0.4.2 | **WordPress :** 6.0+ | **PHP :** 7.4+ | **Réseau :** oui
 
 ---
 
@@ -65,11 +65,11 @@ Le plugin peut remplacer le premier `<h1>` de la page par la valeur résolue. Ce
 
 ### Éditeur (par site)
 
-Tableau d'édition inline par type de contenu avec onglets H1 / Title / Description. Sauvegarde ligne par ligne ou en masse. Import/export CSV.
+Tableau d'édition inline par type de contenu avec onglets H1 / Title / Description. Sauvegarde ligne par ligne ou en masse. Vidage en masse des champs sélectionnés. Import/export CSV.
 
 ### Éditeur réseau
 
-Même interface au niveau réseau, par scope. Permet de définir les valeurs par slug d'entité. Rafraîchissement de l'index de cache. Import/export CSV réseau.
+Même interface au niveau réseau, par scope. Valeurs par slug d'entité, vidage en masse, rafraîchissement de l'index de cache, import/export CSV réseau.
 
 ---
 
@@ -77,7 +77,9 @@ Même interface au niveau réseau, par scope. Permet de définir les valeurs par
 
 **Colonnes site :** `slug, h1, title, desc`
 
-**Colonnes réseau :** `scope_id, slug, h1, title, desc`
+**Colonnes réseau :** `scope_id, slug, h1, title, desc` — le slug est le chemin complet du permalink multisite (ex. `/bb-stores/produit-x/`), le `post_name` simple est accepté en fallback.
+
+Le délimiteur (virgule ou point-virgule) est détecté automatiquement à l'import.
 
 Les lignes commençant par `#` sont ignorées.
 
