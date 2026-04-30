@@ -125,10 +125,13 @@ class LSB_Plugin {
 			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 			'nonce'   => wp_create_nonce( 'lsb_ajax_nonce' ),
 			'i18n'    => [
-				'saving'  => __( 'Enregistrement…', 'local-seo-bulk' ),
-				'saved'   => __( 'Enregistré', 'local-seo-bulk' ),
-				'error'   => __( 'Erreur', 'local-seo-bulk' ),
-				'unsaved' => __( 'modification(s) non enregistrée(s)', 'local-seo-bulk' ),
+				'saving'        => __( 'Enregistrement…', 'local-seo-bulk' ),
+				'saved'         => __( 'Enregistré', 'local-seo-bulk' ),
+				'error'         => __( 'Erreur', 'local-seo-bulk' ),
+				'unsaved'       => __( 'modification(s) non enregistrée(s)', 'local-seo-bulk' ),
+				'saveAllOk'     => __( 'Toutes les modifications ont été enregistrées.', 'local-seo-bulk' ),
+				'saveAllError'  => __( 'Une erreur est survenue lors de l\'enregistrement.', 'local-seo-bulk' ),
+				'dismiss'       => __( 'Rejeter cette notice.', 'local-seo-bulk' ),
 			],
 		] );
 	}

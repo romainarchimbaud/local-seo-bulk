@@ -286,6 +286,16 @@
     gap: 8px;
 }
 
+#lsb-address-form .column-actions {
+    width: 220px;
+}
+
+#lsb-address-form .lsb-actions-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 /* Inputs */
 
 .lsb-value-input {

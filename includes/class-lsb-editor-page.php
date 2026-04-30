@@ -93,8 +93,8 @@ class LSB_Editor_Page {
             if ($lsb_addr_missing) : ?>
                 <div class="notice notice-warning">
                     <p><?php printf(
-                            wp_kses(__('Veuillez terminer la configuration de SEO Masse : renseignez l\'adresse du magasin dans <a href="%s">Réglages</a> pour activer les variables <code>%%lsb_ville%%</code>, <code>%%lsb_code_postal%%</code> et <code>%%lsb_adresse%%</code>.', 'local-seo-bulk'), ['a' => ['href' => []], 'code' => []]),
-                            esc_url(admin_url('admin.php?page=lsb-settings'))
+                            wp_kses(__('Veuillez configurer les <a href="%s">adresses SEO réseau</a> pour activer les variables <code>%%lsb_ville%%</code>, <code>%%lsb_code_postal%%</code>, <code>%%lsb_adresse%%</code> et <code>%%lsb_departement%%</code>.', 'local-seo-bulk'), ['a' => ['href' => []], 'code' => []]),
+                            esc_url(network_admin_url('admin.php?page=lsb-network-addresses'))
                         ); ?></p>
                 </div>
             <?php endif; ?>

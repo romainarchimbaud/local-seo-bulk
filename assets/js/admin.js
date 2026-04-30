@@ -24,6 +24,14 @@
 		$row.toggleClass( 'lsb-dirty', dirty );
 	}
 
+	function showAdminNotice( message, type ) {
+		$( '.lsb-save-all-notice' ).remove();
+		var $notice = $( '<div class="notice notice-' + ( type || 'success' ) + ' is-dismissible lsb-save-all-notice"><p>' + message + '</p><button type="button" class="notice-dismiss"><span class="screen-reader-text">' + lsbData.i18n.dismiss + '</span></button></div>' );
+		$( '.wp-header-end' ).after( $notice );
+		$notice.on( 'click', '.notice-dismiss', function () { $notice.fadeOut( 200, function () { $notice.remove(); } ); } );
+		setTimeout( function () { $notice.fadeOut( 400, function () { $notice.remove(); } ); }, 5000 );
+	}
+
 	$( function () {
 		$( '.lsb-value-input' ).each( function () {
 			$( this ).data( 'initial-value', $( this ).val() );
@@ -284,29 +292,43 @@
 
 		$btn.prop( 'disabled', true ).text( lsbData.i18n.saving );
 
-		var done  = 0;
-		var total = ( siteRows.length ? 1 : 0 ) + ( networkRows.length ? 1 : 0 ) + ( addressRows.length ? 1 : 0 );
+		var done   = 0;
+		var errors = 0;
+		var total  = ( siteRows.length ? 1 : 0 ) + ( networkRows.length ? 1 : 0 ) + ( addressRows.length ? 1 : 0 );
 
-		function finish() {
+		function finish( success ) {
+			if ( ! success ) errors++;
 			done++;
 			if ( done >= total ) {
-				$( '.lsb-value-input' ).each( function () {
-					$( this ).data( 'initial-value', $( this ).val() );
-				} );
-				$( '.lsb-dirty' ).removeClass( 'lsb-dirty' );
-				updateDirtyCounter();
+				if ( errors === 0 ) {
+					$( '.lsb-value-input' ).each( function () {
+						$( this ).data( 'initial-value', $( this ).val() );
+					} );
+					$( '.lsb-dirty' ).removeClass( 'lsb-dirty' );
+					updateDirtyCounter();
+				}
 				$btn.prop( 'disabled', false ).text( $btn.data( 'original-text' ) || lsbData.i18n.saved );
+				showAdminNotice(
+					errors === 0 ? lsbData.i18n.saveAllOk : lsbData.i18n.saveAllError,
+					errors === 0 ? 'success' : 'error'
+				);
 			}
 		}
 
 		if ( siteRows.length ) {
-			$.post( lsbData.ajaxUrl, { action: 'lsb_save_all', nonce: lsbData.nonce, rows: siteRows } ).always( finish );
+			$.post( lsbData.ajaxUrl, { action: 'lsb_save_all', nonce: lsbData.nonce, rows: siteRows } )
+				.done( function ( r ) { finish( r && r.success ); } )
+				.fail( function () { finish( false ); } );
 		}
 		if ( networkRows.length ) {
-			$.post( lsbData.ajaxUrl, { action: 'lsb_save_network_all', nonce: lsbData.nonce, rows: networkRows } ).always( finish );
+			$.post( lsbData.ajaxUrl, { action: 'lsb_save_network_all', nonce: lsbData.nonce, rows: networkRows } )
+				.done( function ( r ) { finish( r && r.success ); } )
+				.fail( function () { finish( false ); } );
 		}
 		if ( addressRows.length ) {
-			$.post( lsbData.ajaxUrl, { action: 'lsb_save_network_address_all', nonce: lsbData.nonce, rows: addressRows } ).always( finish );
+			$.post( lsbData.ajaxUrl, { action: 'lsb_save_network_address_all', nonce: lsbData.nonce, rows: addressRows } )
+				.done( function ( r ) { finish( r && r.success ); } )
+				.fail( function () { finish( false ); } );
 		}
 	} );
 
