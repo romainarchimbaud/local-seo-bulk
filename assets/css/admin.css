@@ -201,6 +201,11 @@
     font-size: 13px;
 }
 
+.lsb-addr-table th {
+    width: 120px;
+    font-weight: 600;
+}
+
 .lsb-vars-table th,
 .lsb-vars-table td {
     padding: .4em .75em;

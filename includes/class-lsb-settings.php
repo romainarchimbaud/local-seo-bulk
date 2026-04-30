@@ -89,23 +89,25 @@ class LSB_Settings {
 				$network_url   = network_admin_url( 'admin.php?page=' . 'lsb-network-addresses' );
 				?>
 				<?php if ( ! empty( array_filter( $addr ) ) ) : ?>
-					<table class="form-table" role="presentation" style="margin-bottom:.5em">
-						<tr>
-							<th scope="row" style="width:8em"><?php esc_html_e( 'Ville', 'local-seo-bulk' ); ?></th>
-							<td><?php echo esc_html( $addr['ville'] ?? '—' ); ?></td>
-						</tr>
-						<tr>
-							<th scope="row"><?php esc_html_e( 'Code postal', 'local-seo-bulk' ); ?></th>
-							<td><?php echo esc_html( $addr['code_postal'] ?? '—' ); ?></td>
-						</tr>
-						<tr>
-							<th scope="row"><?php esc_html_e( 'Adresse', 'local-seo-bulk' ); ?></th>
-							<td><?php echo esc_html( $addr['adresse'] ?? '—' ); ?></td>
-						</tr>
-						<tr>
-							<th scope="row"><?php esc_html_e( 'Département', 'local-seo-bulk' ); ?></th>
-							<td><?php echo esc_html( $addr['departement'] ?? '—' ); ?></td>
-						</tr>
+					<table class="lsb-vars-table lsb-addr-table" style="margin-bottom:1em">
+						<tbody>
+							<tr>
+								<th><?php esc_html_e( 'Ville', 'local-seo-bulk' ); ?></th>
+								<td><?php echo esc_html( $addr['ville'] ?? '—' ); ?></td>
+							</tr>
+							<tr>
+								<th><?php esc_html_e( 'Code postal', 'local-seo-bulk' ); ?></th>
+								<td><?php echo esc_html( $addr['code_postal'] ?? '—' ); ?></td>
+							</tr>
+							<tr>
+								<th><?php esc_html_e( 'Adresse', 'local-seo-bulk' ); ?></th>
+								<td><?php echo esc_html( $addr['adresse'] ?? '—' ); ?></td>
+							</tr>
+							<tr>
+								<th><?php esc_html_e( 'Département', 'local-seo-bulk' ); ?></th>
+								<td><?php echo esc_html( $addr['departement'] ?? '—' ); ?></td>
+							</tr>
+						</tbody>
 					</table>
 				<?php else : ?>
 					<p class="description"><?php esc_html_e( 'Aucune adresse SEO définie pour ce site.', 'local-seo-bulk' ); ?></p>
