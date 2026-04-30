@@ -501,6 +501,9 @@ class LSB_Ajax {
 		if ( ! $blog_id ) {
 			wp_send_json_error( [ 'message' => __( 'blog_id invalide.', 'local-seo-bulk' ) ] );
 		}
+		if ( ! get_site( $blog_id ) ) {
+			wp_send_json_error( [ 'message' => __( 'Site introuvable.', 'local-seo-bulk' ) ] );
+		}
 
 		$all             = get_site_option( 'lsb_network_seo_addresses', [] );
 		$all[ $blog_id ] = [
@@ -526,6 +529,7 @@ class LSB_Ajax {
 		foreach ( $rows as $row_data ) {
 			$blog_id = (int) ( $row_data['blog_id'] ?? 0 );
 			if ( ! $blog_id ) continue;
+			if ( ! get_site( $blog_id ) ) continue;
 			$all[ $blog_id ] = [
 				'ville'       => sanitize_text_field( wp_unslash( $row_data['ville']       ?? '' ) ),
 				'code_postal' => sanitize_text_field( wp_unslash( $row_data['code_postal'] ?? '' ) ),
@@ -595,8 +599,7 @@ class LSB_Ajax {
 	}
 
 	public function export_network_address_csv() {
-		if ( ! check_ajax_referer( 'lsb_ajax_nonce', 'nonce', false ) ) wp_die( 'Nonce invalide.' );
-		if ( ! current_user_can( 'manage_network_options' ) ) wp_die( 'Permission refusée.' );
+		$this->verify_nonce( true );
 
 		$all   = get_site_option( 'lsb_network_seo_addresses', [] );
 		$sites = get_sites( [ 'number' => 0, 'deleted' => 0 ] );

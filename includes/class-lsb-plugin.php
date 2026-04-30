@@ -92,15 +92,9 @@ class LSB_Plugin {
 		$this->h1_replacer->init();
 		$this->ajax->register();
 
-		if ( is_network_admin() || ( defined( 'DOING_AJAX' ) && DOING_AJAX ) ) {
-			$this->network_scope_page->init();
-			$this->network_editor_page->init();
-			$this->network_address_page->init();
-		} else {
-			$this->network_scope_page->init();
-			$this->network_editor_page->init();
-			$this->network_address_page->init();
-		}
+		$this->network_scope_page->init();
+		$this->network_editor_page->init();
+		$this->network_address_page->init();
 
 		$this->admin_menu->init();
 		$this->settings->init();

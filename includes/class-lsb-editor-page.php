@@ -87,7 +87,8 @@ class LSB_Editor_Page {
             <hr class="wp-header-end">
 
             <?php
-            $lsb_addr        = get_option('lsb_address', []);
+            $all_addresses   = get_site_option( 'lsb_network_seo_addresses', [] );
+            $lsb_addr        = $all_addresses[ get_current_blog_id() ] ?? [];
             $lsb_addr_missing = empty($lsb_addr['ville']) && empty($lsb_addr['code_postal']);
             if ($lsb_addr_missing) : ?>
                 <div class="notice notice-warning">
@@ -335,14 +336,22 @@ class LSB_Editor_Page {
                 $type_lbl = $type_obj ? $type_obj->labels->singular_name : $obj->post_type;
                 $url      = get_permalink($obj);
                 $edit_url = get_edit_post_link($obj->ID, 'raw');
-                $current  = $this->get_post_current_value($obj->ID, $active_tab);
+                $current_values = [
+                    'h1'    => $this->get_post_current_value($obj->ID, 'h1'),
+                    'title' => $this->get_post_current_value($obj->ID, 'title'),
+                    'desc'  => $this->get_post_current_value($obj->ID, 'desc'),
+                ];
             } else {
                 $entity   = ['type' => 'term', 'id' => $obj->term_id];
                 $tax_obj  = get_taxonomy($obj->taxonomy);
                 $type_lbl = $tax_obj ? $tax_obj->labels->singular_name : $obj->taxonomy;
                 $url      = get_term_link($obj);
                 $edit_url = get_edit_term_link($obj->term_id, $obj->taxonomy);
-                $current  = $this->get_term_current_value($obj->term_id, $active_tab);
+                $current_values = [
+                    'h1'    => $this->get_term_current_value($obj->term_id, 'h1'),
+                    'title' => $this->get_term_current_value($obj->term_id, 'title'),
+                    'desc'  => $this->get_term_current_value($obj->term_id, 'desc'),
+                ];
             }
 
             $entities[] = [
@@ -351,7 +360,7 @@ class LSB_Editor_Page {
                 'url'             => is_wp_error($url) ? '' : $url,
                 'edit_url'        => $edit_url ?: '',
                 'type_label'      => $type_lbl,
-                'current_value'   => $current,
+                'current_values'  => $current_values,
                 'slug'            => $obj_slug,
                 'scope_id'        => $scope_id,
                 'network_pattern' => $net_raw['raw'],
