@@ -20,6 +20,7 @@ class LSB_Shortcodes {
 		add_shortcode( 'lsb_ville',       [ $this, 'shortcode_ville' ] );
 		add_shortcode( 'lsb_code_postal', [ $this, 'shortcode_code_postal' ] );
 		add_shortcode( 'lsb_adresse',     [ $this, 'shortcode_adresse' ] );
+		add_shortcode( 'lsb_departement',  [ $this, 'shortcode_departement' ] );
 		add_shortcode( 'lsb_h1',          [ $this, 'shortcode_h1' ] );
 	}
 
@@ -38,6 +39,11 @@ class LSB_Shortcodes {
 		return esc_html( $address['adresse'] ?? '' );
 	}
 
+	public function shortcode_departement( $atts ) {
+		$address = $this->get_address();
+		return esc_html( $address['departement'] ?? '' );
+	}
+
 	public function shortcode_h1( $atts ) {
 		$post = get_queried_object();
 		if ( ! $post instanceof WP_Post ) return '';
@@ -47,7 +53,8 @@ class LSB_Shortcodes {
 
 	private function get_address() {
 		if ( null === $this->address ) {
-			$this->address = get_option( 'lsb_address', [] );
+			$all           = get_site_option( 'lsb_network_seo_addresses', [] );
+			$this->address = $all[ get_current_blog_id() ] ?? [];
 		}
 		return $this->address;
 	}
