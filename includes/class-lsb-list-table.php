@@ -139,7 +139,15 @@ class LSB_List_Table extends WP_List_Table {
 	}
 
 	public function column_current_value( $item ) {
-		return '<span class="lsb-current-value">' . esc_html( $item['current_value'] ) . '</span>';
+		$html = '';
+		foreach ( [ 'h1', 'title', 'desc' ] as $fk ) {
+			$val    = $item['current_values'][ $fk ] ?? '';
+			$hidden = $fk !== $this->field ? ' style="display:none"' : '';
+			$html  .= '<div class="lsb-field-panel" data-field="' . esc_attr( $fk ) . '"' . $hidden . '>';
+			$html  .= '<span class="lsb-current-value">' . esc_html( $val ) . '</span>';
+			$html  .= '</div>';
+		}
+		return $html;
 	}
 
 	public function column_network_pattern( $item ) {

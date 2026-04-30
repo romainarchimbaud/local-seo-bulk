@@ -133,7 +133,7 @@ class LSB_Network_Address_Page {
 							<th style="width:8em"><?php esc_html_e( 'Code Postal', 'local-seo-bulk' ); ?></th>
 							<th style="min-width:180px"><?php esc_html_e( 'Adresse', 'local-seo-bulk' ); ?></th>
 							<th style="min-width:120px"><?php esc_html_e( 'Département', 'local-seo-bulk' ); ?></th>
-							<th><?php esc_html_e( 'Actions', 'local-seo-bulk' ); ?></th>
+							<th class="column-actions"><?php esc_html_e( 'Actions', 'local-seo-bulk' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
