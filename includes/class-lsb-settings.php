@@ -18,11 +18,6 @@ class LSB_Settings {
 	}
 
 	public function register_settings() {
-		register_setting( 'lsb_address_group', 'lsb_address', [
-			'type'              => 'array',
-			'sanitize_callback' => [ $this, 'sanitize_address' ],
-		] );
-
 		register_setting( 'lsb_editor_types_group', 'lsb_editor_types', [
 			'type'              => 'array',
 			'sanitize_callback' => [ $this, 'sanitize_editor_types' ],
@@ -40,14 +35,6 @@ class LSB_Settings {
 	}
 
 	// --- Sanitize callbacks ---
-
-	public function sanitize_address( $input ) {
-		return [
-			'adresse'     => sanitize_text_field( $input['adresse']     ?? '' ),
-			'code_postal' => sanitize_text_field( $input['code_postal'] ?? '' ),
-			'ville'       => sanitize_text_field( $input['ville']       ?? '' ),
-		];
-	}
 
 	public function sanitize_editor_types( $input ) {
 		return [
@@ -93,47 +80,44 @@ class LSB_Settings {
 		<div class="wrap lsb-settings-wrap">
 			<h1><?php esc_html_e( 'Réglages — Local SEO Bulk', 'local-seo-bulk' ); ?></h1>
 
-			<!-- ─── Adresse ──────────────────────────────────────── -->
+			<!-- ─── Adresse SEO ──────────────────────────────── -->
 			<div class="lsb-settings-card">
-				<h2><?php esc_html_e( 'Adresse du magasin', 'local-seo-bulk' ); ?></h2>
+				<h2><?php esc_html_e( 'Adresse SEO', 'local-seo-bulk' ); ?></h2>
 				<?php
-				// Pre-fill from ACF if lsb_address is empty
-				$saved_address = get_option( 'lsb_address', [] );
-				$acf_address   = ( function_exists( 'get_field' ) ) ? get_field( 'adresse', 'option' ) : [];
-				$acf_address   = is_array( $acf_address ) ? $acf_address : [];
-
-				$val_adresse     = $saved_address['adresse']     ?? '';
-				$val_code_postal = $saved_address['code_postal'] ?? '';
-				$val_ville       = $saved_address['ville']       ?? '';
-
-				if ( empty( $val_adresse ) && ! empty( $acf_address ) ) {
-					$val_adresse = trim( ( $acf_address['street_number'] ?? '' ) . ' ' . ( $acf_address['street_name'] ?? '' ) );
-				}
-				if ( empty( $val_code_postal ) && ! empty( $acf_address['post_code'] ) ) {
-					$val_code_postal = $acf_address['post_code'];
-				}
-				if ( empty( $val_ville ) && ! empty( $acf_address['city'] ) ) {
-					$val_ville = $acf_address['city'];
-				}
+				$all_addresses = get_site_option( 'lsb_network_seo_addresses', [] );
+				$addr          = $all_addresses[ get_current_blog_id() ] ?? [];
+				$network_url   = network_admin_url( 'admin.php?page=' . 'lsb-network-addresses' );
 				?>
-				<form method="post" action="options.php">
-					<?php settings_fields( 'lsb_address_group' ); ?>
-					<table class="form-table" role="presentation">
+				<?php if ( ! empty( array_filter( $addr ) ) ) : ?>
+					<table class="form-table" role="presentation" style="margin-bottom:.5em">
 						<tr>
-							<th scope="row"><label for="lsb-adresse"><?php esc_html_e( 'Adresse', 'local-seo-bulk' ); ?></label></th>
-							<td><input id="lsb-adresse" type="text" name="lsb_address[adresse]" value="<?php echo esc_attr( $val_adresse ); ?>" class="regular-text"></td>
+							<th scope="row" style="width:8em"><?php esc_html_e( 'Ville', 'local-seo-bulk' ); ?></th>
+							<td><?php echo esc_html( $addr['ville'] ?? '—' ); ?></td>
 						</tr>
 						<tr>
-							<th scope="row"><label for="lsb-cp"><?php esc_html_e( 'Code postal', 'local-seo-bulk' ); ?></label></th>
-							<td><input id="lsb-cp" type="text" name="lsb_address[code_postal]" value="<?php echo esc_attr( $val_code_postal ); ?>" class="small-text" style="width:8em"></td>
+							<th scope="row"><?php esc_html_e( 'Code postal', 'local-seo-bulk' ); ?></th>
+							<td><?php echo esc_html( $addr['code_postal'] ?? '—' ); ?></td>
 						</tr>
 						<tr>
-							<th scope="row"><label for="lsb-ville"><?php esc_html_e( 'Ville', 'local-seo-bulk' ); ?></label></th>
-							<td><input id="lsb-ville" type="text" name="lsb_address[ville]" value="<?php echo esc_attr( $val_ville ); ?>" class="regular-text"></td>
+							<th scope="row"><?php esc_html_e( 'Adresse', 'local-seo-bulk' ); ?></th>
+							<td><?php echo esc_html( $addr['adresse'] ?? '—' ); ?></td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Département', 'local-seo-bulk' ); ?></th>
+							<td><?php echo esc_html( $addr['departement'] ?? '—' ); ?></td>
 						</tr>
 					</table>
-					<?php submit_button( __( 'Enregistrer l\'adresse', 'local-seo-bulk' ), 'primary', 'submit', false ); ?>
-				</form>
+				<?php else : ?>
+					<p class="description"><?php esc_html_e( 'Aucune adresse SEO définie pour ce site.', 'local-seo-bulk' ); ?></p>
+				<?php endif; ?>
+				<p><?php printf(
+					wp_kses(
+						/* translators: %s: link to network addresses page */
+						__( 'Les adresses SEO sont gérées au niveau réseau. <a href="%s">Configurer les adresses SEO réseau →</a>', 'local-seo-bulk' ),
+						[ 'a' => [ 'href' => [] ] ]
+					),
+					esc_url( $network_url )
+				); ?></p>
 
 				<hr style="margin:1.5em 0">
 
@@ -144,6 +128,7 @@ class LSB_Settings {
 						<tr><td><code>[lsb_ville]</code></td><td><code>%%lsb_ville%%</code></td><td><code>%%lsb_ville%%</code></td></tr>
 						<tr><td><code>[lsb_code_postal]</code></td><td><code>%%lsb_code_postal%%</code></td><td><code>%%lsb_code_postal%%</code></td></tr>
 						<tr><td><code>[lsb_adresse]</code></td><td><code>%%lsb_adresse%%</code></td><td><code>%%lsb_adresse%%</code></td></tr>
+						<tr><td><code>[lsb_departement]</code></td><td><code>%%lsb_departement%%</code></td><td><code>%%lsb_departement%%</code></td></tr>
 						<tr><td><code>[lsb_h1]</code></td><td>—</td><td>—</td></tr>
 					</tbody>
 				</table>
