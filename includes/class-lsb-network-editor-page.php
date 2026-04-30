@@ -244,7 +244,7 @@ class LSB_Network_Editor_Page {
                             <th><?php esc_html_e('Slug', 'local-seo-bulk'); ?></th>
                             <th style="width:60px"><?php esc_html_e('Sites', 'local-seo-bulk'); ?></th>
                             <th style="min-width:480px"><?php esc_html_e('Valeur réseau', 'local-seo-bulk'); ?></th>
-                            <th><?php esc_html_e('Actions', 'local-seo-bulk'); ?></th>
+                            <th class="column-actions"><?php esc_html_e('Actions', 'local-seo-bulk'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
