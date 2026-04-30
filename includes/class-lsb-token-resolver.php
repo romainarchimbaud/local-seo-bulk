@@ -18,10 +18,11 @@ class LSB_Token_Resolver {
 		$ville       = ! empty( $address['ville'] )       ? $address['ville']       : '';
 		$code_postal = ! empty( $address['code_postal'] ) ? $address['code_postal'] : '';
 		$adresse     = ! empty( $address['adresse'] )     ? $address['adresse']     : '';
+		$departement = ! empty( $address['departement'] ) ? $address['departement'] : '';
 
 		$value = str_replace(
-			[ '%%lsb_ville%%', '%%lsb_code_postal%%', '%%lsb_adresse%%' ],
-			[ $ville, $code_postal, $adresse ],
+			[ '%%lsb_ville%%', '%%lsb_code_postal%%', '%%lsb_adresse%%', '%%lsb_departement%%' ],
+			[ $ville, $code_postal, $adresse, $departement ],
 			$value
 		);
 
@@ -94,7 +95,8 @@ class LSB_Token_Resolver {
 
 	private function get_address() {
 		if ( null === $this->address ) {
-			$this->address = get_option( 'lsb_address', [] );
+			$all           = get_site_option( 'lsb_network_seo_addresses', [] );
+			$this->address = $all[ get_current_blog_id() ] ?? [];
 		}
 		return $this->address;
 	}
