@@ -51,7 +51,7 @@ class LSB_Network_Address_Page {
 		if ( $per_page < 1 ) $per_page = 50;
 		$total_rows   = count( $all_sites );
 		$total_pages  = max( 1, (int) ceil( $total_rows / $per_page ) );
-		$current_page = max( 1, min( $total_pages, (int) ( $_GET['paged'] ?? 1 ) ) );
+		$current_page = max( 1, min( $total_pages, (int) wp_unslash( $_GET['paged'] ?? 1 ) ) );
 		$sites_page   = array_slice( $all_sites, ( $current_page - 1 ) * $per_page, $per_page );
 
 		$export_url = add_query_arg( [
