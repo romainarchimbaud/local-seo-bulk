@@ -521,7 +521,8 @@ class LSB_Ajax {
 			wp_send_json_error( [ 'message' => __( 'Données invalides.', 'local-seo-bulk' ) ] );
 		}
 
-		$all = get_site_option( 'lsb_network_seo_addresses', [] );
+		$all   = get_site_option( 'lsb_network_seo_addresses', [] );
+		$saved = 0;
 		foreach ( $rows as $row_data ) {
 			$blog_id = (int) ( $row_data['blog_id'] ?? 0 );
 			if ( ! $blog_id ) continue;
@@ -531,42 +532,41 @@ class LSB_Ajax {
 				'adresse'     => sanitize_text_field( wp_unslash( $row_data['adresse']     ?? '' ) ),
 				'departement' => sanitize_text_field( wp_unslash( $row_data['departement'] ?? '' ) ),
 			];
+			$saved++;
 		}
 		update_site_option( 'lsb_network_seo_addresses', $all );
-		wp_send_json_success( [ 'message' => __( 'Tout enregistré.', 'local-seo-bulk' ) ] );
+		wp_send_json_success( [ 'saved' => $saved, 'message' => __( 'Tout enregistré.', 'local-seo-bulk' ) ] );
 	}
 
 	public function import_network_address_csv() {
-		check_ajax_referer( 'lsb_ajax_nonce', 'nonce' );
-		if ( ! current_user_can( 'manage_network_options' ) ) {
-			wp_send_json_error( [ 'message' => __( 'Permission refusée.', 'local-seo-bulk' ) ] );
-		}
+		$this->verify_nonce( true );
 
 		if ( empty( $_FILES['lsb_csv']['tmp_name'] ) ) {
 			wp_send_json_error( [ 'message' => __( 'Aucun fichier reçu.', 'local-seo-bulk' ) ] );
 		}
 
+		$file     = $_FILES['lsb_csv']['tmp_name'];
 		$filename = isset( $_FILES['lsb_csv']['name'] ) ? sanitize_file_name( $_FILES['lsb_csv']['name'] ) : '';
-		if ( ! $this->validate_csv_mime_type( $_FILES['lsb_csv']['tmp_name'], $filename ) ) {
+		if ( ! $this->validate_csv_mime_type( $file, $filename ) ) {
 			wp_send_json_error( [ 'message' => __( 'Le fichier doit être un CSV valide.', 'local-seo-bulk' ) ] );
 		}
 
-		$content = file_get_contents( $_FILES['lsb_csv']['tmp_name'] ); // phpcs:ignore
-		$lines   = preg_split( '/\r\n|\r|\n/', trim( $content ) );
+		$handle = fopen( $file, 'r' ); // phpcs:ignore
+		if ( ! $handle ) {
+			wp_send_json_error( [ 'message' => __( 'Impossible de lire le fichier.', 'local-seo-bulk' ) ] );
+		}
 
-		if ( empty( $lines ) ) {
+		$delim  = $this->detect_csv_delimiter( $file );
+		$header = fgetcsv( $handle, 0, $delim );
+		if ( ! $header ) {
+			fclose( $handle ); // phpcs:ignore
 			wp_send_json_error( [ 'message' => __( 'Fichier vide.', 'local-seo-bulk' ) ] );
 		}
 
-		// Auto-detect delimiter (semicolon preferred for French content)
-		$first = $lines[0];
-		$delim = ( substr_count( $first, ';' ) >= substr_count( $first, ',' ) ) ? ';' : ',';
-
-		$header = str_getcsv( array_shift( $lines ), $delim );
-		$header = array_map( 'trim', $header );
-		$map    = array_flip( $header );
+		$map = array_flip( array_map( 'trim', $header ) );
 
 		if ( ! isset( $map['blog_id'] ) ) {
+			fclose( $handle ); // phpcs:ignore
 			wp_send_json_error( [ 'message' => __( 'Colonne blog_id manquante.', 'local-seo-bulk' ) ] );
 		}
 
@@ -574,23 +574,22 @@ class LSB_Ajax {
 		$imported = 0;
 		$skipped  = 0;
 
-		foreach ( $lines as $line ) {
-			$line = trim( $line );
-			if ( '' === $line || 0 === strpos( $line, '#' ) ) continue;
+		while ( ( $cols = fgetcsv( $handle, 0, $delim ) ) !== false ) {
+			if ( empty( $cols[0] ) || str_starts_with( trim( $cols[0] ), '#' ) ) continue;
 
-			$cols    = str_getcsv( $line, $delim );
 			$blog_id = (int) ( $cols[ $map['blog_id'] ] ?? 0 );
 			if ( ! $blog_id ) { $skipped++; continue; }
 
 			$all[ $blog_id ] = [
-				'ville'       => sanitize_text_field( $cols[ $map['ville']       ?? PHP_INT_MAX ] ?? '' ),
-				'code_postal' => sanitize_text_field( $cols[ $map['code_postal'] ?? PHP_INT_MAX ] ?? '' ),
-				'adresse'     => sanitize_text_field( $cols[ $map['adresse']     ?? PHP_INT_MAX ] ?? '' ),
-				'departement' => sanitize_text_field( $cols[ $map['departement'] ?? PHP_INT_MAX ] ?? '' ),
+				'ville'       => sanitize_text_field( wp_unslash( $cols[ $map['ville']       ?? PHP_INT_MAX ] ?? '' ) ),
+				'code_postal' => sanitize_text_field( wp_unslash( $cols[ $map['code_postal'] ?? PHP_INT_MAX ] ?? '' ) ),
+				'adresse'     => sanitize_text_field( wp_unslash( $cols[ $map['adresse']     ?? PHP_INT_MAX ] ?? '' ) ),
+				'departement' => sanitize_text_field( wp_unslash( $cols[ $map['departement'] ?? PHP_INT_MAX ] ?? '' ) ),
 			];
 			$imported++;
 		}
 
+		fclose( $handle ); // phpcs:ignore
 		update_site_option( 'lsb_network_seo_addresses', $all );
 		wp_send_json_success( [ 'imported' => $imported, 'skipped' => $skipped ] );
 	}
@@ -604,6 +603,7 @@ class LSB_Ajax {
 
 		header( 'Content-Type: text/csv; charset=utf-8' );
 		header( 'Content-Disposition: attachment; filename="lsb-network-addresses.csv"' );
+		header( 'Pragma: no-cache' );
 
 		$out = fopen( 'php://output', 'w' ); // phpcs:ignore
 		fputcsv( $out, [ 'blog_id', 'ville', 'code_postal', 'adresse', 'departement' ], ';' );
@@ -629,7 +629,7 @@ class LSB_Ajax {
 			wp_send_json_error( [ 'message' => __( 'ACF non disponible.', 'local-seo-bulk' ) ] );
 		}
 
-		$acf_field = sanitize_text_field( wp_unslash( $_POST['acf_field'] ?? 'adresse' ) );
+		$acf_field = sanitize_key( wp_unslash( $_POST['acf_field'] ?? 'adresse' ) );
 		update_site_option( 'lsb_network_address_acf_field', $acf_field );
 
 		$sites  = get_sites( [ 'number' => 0, 'deleted' => 0 ] );
