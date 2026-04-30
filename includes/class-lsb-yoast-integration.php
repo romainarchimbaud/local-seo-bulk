@@ -39,6 +39,11 @@ class LSB_Yoast_Integration {
 			$a = $this->get_address();
 			return $a['adresse'] ?? '';
 		}, 'advanced', __( 'Adresse (Local SEO Bulk)', 'local-seo-bulk' ) );
+
+		wpseo_register_var_replacement( '%%lsb_departement%%', function() {
+			$a = $this->get_address();
+			return $a['departement'] ?? '';
+		}, 'advanced', __( 'Département (Local SEO Bulk)', 'local-seo-bulk' ) );
 	}
 
 	public function filter_title( $title ) {
@@ -63,7 +68,8 @@ class LSB_Yoast_Integration {
 
 	private function get_address() {
 		if ( null === $this->address ) {
-			$this->address = get_option( 'lsb_address', [] );
+			$all           = get_site_option( 'lsb_network_seo_addresses', [] );
+			$this->address = $all[ get_current_blog_id() ] ?? [];
 		}
 		return $this->address;
 	}
