@@ -122,7 +122,7 @@ class LSB_Editor_Page {
                             <option value=""><?php esc_html_e('Sélectionner votre type…', 'local-seo-bulk'); ?></option>
 
                             <?php if (! empty($scopes)) : ?>
-                                <optgroup label="<?php esc_attr_e('Scopes réseau', 'local-seo-bulk'); ?>">
+                                <optgroup label="<?php esc_attr_e('Règles globales', 'local-seo-bulk'); ?>">
                                     <?php foreach ($scopes as $sid => $scope) : ?>
                                         <option value="<?php echo esc_attr('scope|' . $sid); ?>"
                                             <?php selected($active_object_value, 'scope|' . $sid); ?>>
