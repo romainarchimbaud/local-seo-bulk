@@ -203,33 +203,6 @@ class LSB_Network_Scope_Page {
             </p>
         </div>
 
-        <script>
-        (function() {
-            function syncCheckboxes(source, targets) {
-                targets.forEach(function(cb) { cb.checked = source.checked; });
-            }
-            var all1 = document.getElementById('cb-select-all');
-            var all2 = document.getElementById('cb-select-all-2');
-            var rows = Array.from(document.querySelectorAll('input[name="scope_ids[]"]'));
-            if (all1) {
-                all1.addEventListener('change', function() { syncCheckboxes(this, rows); if (all2) all2.checked = this.checked; });
-            }
-            if (all2) {
-                all2.addEventListener('change', function() { syncCheckboxes(this, rows); if (all1) all1.checked = this.checked; });
-            }
-            // Handle bottom bulk action select (mirror to top before submit)
-            var form = document.getElementById('lsb-scopes-form');
-            var topAction   = document.querySelector('select[name="bulk_action"]');
-            var bottomAction = document.querySelector('select[name="bulk_action_bottom"]');
-            if (form && bottomAction) {
-                form.addEventListener('submit', function() {
-                    if (bottomAction.value !== '-1' && topAction) {
-                        topAction.value = bottomAction.value;
-                    }
-                });
-            }
-        }());
-        </script>
     <?php
     }
 

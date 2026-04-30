@@ -79,8 +79,8 @@ class LSB_Network_Address_Page {
 				</p>
 				<input type="file" id="lsb-address-csv-file" accept=".csv" style="display:block;margin:1.5em 0.5em">
 				<input type="hidden" id="lsb-address-import-nonce" value="<?php echo esc_attr( wp_create_nonce( 'lsb_ajax_nonce' ) ); ?>">
-				<button type="button" class="button button-primary" id="lsb-do-address-import"><?php esc_html_e( 'Importer', 'local-seo-bulk' ); ?></button>
-				<button type="button" class="button" id="lsb-close-address-import"><?php esc_html_e( 'Annuler', 'local-seo-bulk' ); ?></button>
+				<button type="button" class="button button-primary lsb-do-import" id="lsb-do-address-import" data-action="lsb_import_network_address_csv" data-dialog="#lsb-address-import-dialog" data-file-field="#lsb-address-csv-file" data-nonce-field="#lsb-address-import-nonce" data-result="#lsb-address-import-result" data-reload-on-success="1" data-empty-msg="<?php esc_attr_e( 'Veuillez sélectionner un fichier CSV.', 'local-seo-bulk' ); ?>"><?php esc_html_e( 'Importer', 'local-seo-bulk' ); ?></button>
+				<button type="button" class="button lsb-panel-close" id="lsb-close-address-import" data-target="#lsb-address-import-dialog"><?php esc_html_e( 'Annuler', 'local-seo-bulk' ); ?></button>
 				<p id="lsb-address-import-result" style="margin-top:.5em"></p>
 			</div>
 
@@ -93,8 +93,8 @@ class LSB_Network_Address_Page {
 				</label>
 				<br><br>
 				<input type="hidden" id="lsb-address-prefill-nonce" value="<?php echo esc_attr( wp_create_nonce( 'lsb_ajax_nonce' ) ); ?>">
-				<button type="button" class="button button-primary" id="lsb-do-address-prefill"><?php esc_html_e( 'Pré-remplir', 'local-seo-bulk' ); ?></button>
-				<button type="button" class="button" id="lsb-close-address-prefill"><?php esc_html_e( 'Fermer', 'local-seo-bulk' ); ?></button>
+				<button type="button" class="button button-primary lsb-do-address-prefill" id="lsb-do-address-prefill" data-action="lsb_prefill_network_addresses" data-nonce-field="#lsb-address-prefill-nonce" data-acf-field="#lsb-acf-field-name" data-result="#lsb-address-prefill-result" data-confirm="<?php esc_attr_e( 'Pré-remplir les entrées vides depuis ACF ? Les entrées existantes ne seront pas modifiées.', 'local-seo-bulk' ); ?>" data-reload-on-filled="1"><?php esc_html_e( 'Pré-remplir', 'local-seo-bulk' ); ?></button>
+				<button type="button" class="button lsb-panel-close" id="lsb-close-address-prefill" data-target="#lsb-address-prefill-panel"><?php esc_html_e( 'Fermer', 'local-seo-bulk' ); ?></button>
 				<p id="lsb-address-prefill-result" style="margin-top:.5em"></p>
 			</div>
 
@@ -109,10 +109,10 @@ class LSB_Network_Address_Page {
 					<input type="button" class="button action" id="lsb-address-bulk-apply" value="<?php esc_attr_e( 'Appliquer', 'local-seo-bulk' ); ?>">
 				</div>
 				<div class="lsb-scope-actions">
-					<button type="button" class="button" id="lsb-open-address-import"><?php esc_html_e( 'Importer CSV', 'local-seo-bulk' ); ?></button>
+					<button type="button" class="button lsb-panel-toggle" id="lsb-open-address-import" data-target="#lsb-address-import-dialog" data-exclusive="#lsb-address-prefill-panel"><?php esc_html_e( 'Importer CSV', 'local-seo-bulk' ); ?></button>
 					<a href="<?php echo esc_url( $export_url ); ?>" class="button"><?php esc_html_e( 'Exporter CSV', 'local-seo-bulk' ); ?></a>
 					<a href="<?php echo esc_url( $template_url ); ?>" class="button"><?php esc_html_e( 'Télécharger le modèle', 'local-seo-bulk' ); ?></a>
-					<button type="button" class="button" id="lsb-open-address-prefill"><?php esc_html_e( 'Pré-remplir ACF', 'local-seo-bulk' ); ?></button>
+					<button type="button" class="button lsb-panel-toggle" id="lsb-open-address-prefill" data-target="#lsb-address-prefill-panel" data-exclusive="#lsb-address-import-dialog"><?php esc_html_e( 'Pré-remplir ACF', 'local-seo-bulk' ); ?></button>
 					<button type="button" class="button button-primary" id="lsb-save-all"><?php esc_html_e( 'Tout enregistrer', 'local-seo-bulk' ); ?></button>
 					<span class="lsb-dirty-count" id="lsb-dirty-count"></span>
 				</div>
@@ -197,64 +197,6 @@ class LSB_Network_Address_Page {
 				</table>
 			</form>
 
-			<!-- Import / prefill inline JS -->
-			<script>
-			(function($) {
-				$(function() {
-					// Import dialog (closes prefill panel if open)
-					$('#lsb-open-address-import').on('click', function() {
-						$('#lsb-address-prefill-panel').hide();
-						$('#lsb-address-import-dialog').toggle();
-					});
-					$('#lsb-close-address-import').on('click', function() { $('#lsb-address-import-dialog').hide(); });
-					$('#lsb-do-address-import').on('click', function() {
-						var file = $('#lsb-address-csv-file')[0].files[0];
-						if (!file) { alert(<?php echo json_encode( __( 'Sélectionnez un fichier CSV.', 'local-seo-bulk' ) ); ?>); return; }
-						var fd = new FormData();
-						fd.append('action', 'lsb_import_network_address_csv');
-						fd.append('nonce', $('#lsb-address-import-nonce').val());
-						fd.append('lsb_csv', file);
-						$(this).prop('disabled', true);
-						$.ajax({ url: <?php echo json_encode( admin_url( 'admin-ajax.php' ) ); ?>, type: 'POST', data: fd, processData: false, contentType: false })
-							.done(function(r) {
-								if (r.success) {
-									$('#lsb-address-import-result').text(<?php echo json_encode( __( 'Importé : ', 'local-seo-bulk' ) ); ?> + r.data.imported + <?php echo json_encode( ' — Ignoré : ' ); ?> + r.data.skipped);
-									setTimeout(function() { location.reload(); }, 800);
-								} else {
-									$('#lsb-address-import-result').text(r.data.message || <?php echo json_encode( __( 'Erreur.', 'local-seo-bulk' ) ); ?>);
-								}
-							})
-							.fail(function() { $('#lsb-address-import-result').text(<?php echo json_encode( __( 'Erreur réseau.', 'local-seo-bulk' ) ); ?>); })
-							.always(function() { $('#lsb-do-address-import').prop('disabled', false); });
-					});
-
-					// Prefill panel (closes import dialog if open)
-					$('#lsb-open-address-prefill').on('click', function() {
-						$('#lsb-address-import-dialog').hide();
-						$('#lsb-address-prefill-panel').toggle();
-					});
-					$('#lsb-close-address-prefill').on('click', function() { $('#lsb-address-prefill-panel').hide(); });
-					$('#lsb-do-address-prefill').on('click', function() {
-						if (!confirm(<?php echo json_encode( __( 'Pré-remplir les entrées vides depuis ACF ? Les entrées existantes ne seront pas modifiées.', 'local-seo-bulk' ) ); ?>)) return;
-						$(this).prop('disabled', true);
-						$.post(<?php echo json_encode( admin_url( 'admin-ajax.php' ) ); ?>, {
-							action: 'lsb_prefill_network_addresses',
-							nonce: $('#lsb-address-prefill-nonce').val(),
-							acf_field: $('#lsb-acf-field-name').val()
-						}).done(function(r) {
-							if (r.success) {
-								$('#lsb-address-prefill-result').text(<?php echo json_encode( __( 'Sites remplis : ', 'local-seo-bulk' ) ); ?> + r.data.filled);
-								if (r.data.filled > 0) setTimeout(function() { location.reload(); }, 800);
-							} else {
-								$('#lsb-address-prefill-result').text(r.data.message || <?php echo json_encode( __( 'Erreur.', 'local-seo-bulk' ) ); ?>);
-							}
-						})
-						.fail(function() { $('#lsb-address-prefill-result').text(<?php echo json_encode( __( 'Erreur réseau.', 'local-seo-bulk' ) ); ?>); })
-						.always(function() { $('#lsb-do-address-prefill').prop('disabled', false); });
-					});
-				});
-			}(jQuery));
-			</script>
 		</div>
 		<?php
 	}

@@ -480,4 +480,187 @@
 		$( 'input.lsb-address-cb' ).prop( 'checked', $( this ).is( ':checked' ) );
 	} );
 
+	// =====================================================================
+	// Section 10: Panel / dialog management
+	// =====================================================================
+	$( document ).on( 'click', '.lsb-panel-toggle', function ( e ) {
+		e.preventDefault();
+		var $btn      = $( this );
+		var target    = $btn.data( 'target' );
+		var exclusive = $btn.data( 'exclusive' );
+		if ( exclusive ) {
+			$( exclusive ).hide();
+		}
+		$( target ).toggle();
+	} );
+
+	$( document ).on( 'click', '.lsb-panel-close', function ( e ) {
+		e.preventDefault();
+		var target = $( this ).data( 'target' );
+		$( target ).hide();
+	} );
+
+	// =====================================================================
+	// Section 11: Generic CSV import handler
+	// All import buttons use class .lsb-do-import.
+	// Behavior driven by data-attributes:
+	//   data-action          — AJAX action name
+	//   data-file-field      — selector for <input type="file">
+	//   data-object-field    — selector for optional object <select> (site-level only)
+	//   data-nonce-field     — selector for hidden nonce input
+	//   data-result          — selector for result <p>
+	//   data-reload-on-success="1" — reload when resp.data.imported > 0
+	//   data-reload-on-missed="1"  — reload only when DOM patch misses rows
+	//   data-patch-rows="1"        — patch network input cells inline after import
+	// =====================================================================
+	$( document ).on( 'click', '.lsb-do-import', function () {
+		var $btn            = $( this );
+		var action          = $btn.data( 'action' );
+		var fileField       = $btn.data( 'file-field' );
+		var objectField     = $btn.data( 'object-field' );
+		var nonceField      = $btn.data( 'nonce-field' );
+		var resultEl        = $btn.data( 'result' );
+		var reloadOnSuccess = $btn.data( 'reload-on-success' );
+		var reloadOnMissed  = $btn.data( 'reload-on-missed' );
+		var patchRows       = $btn.data( 'patch-rows' );
+
+		var file = $( fileField )[ 0 ].files[ 0 ];
+		if ( ! file ) {
+			window.alert( $btn.data( 'empty-msg' ) || 'Veuillez sélectionner un fichier CSV.' );
+			return;
+		}
+
+		var fd = new FormData();
+		fd.append( 'action', action );
+		fd.append( 'nonce', $( nonceField ).val() );
+		if ( objectField ) {
+			fd.append( 'lsb_object', $( objectField ).val() );
+		}
+		fd.append( 'lsb_csv', file );
+
+		$btn.prop( 'disabled', true );
+
+		$.ajax( {
+			url:         lsbData.ajaxUrl,
+			type:        'POST',
+			data:        fd,
+			processData: false,
+			contentType: false,
+		} ).done( function ( resp ) {
+			if ( resp.success ) {
+				var msg = 'Importé : ' + resp.data.imported + ' — Ignoré : ' + resp.data.skipped;
+				if ( resp.data.errors && resp.data.errors.length ) {
+					msg += '\n' + resp.data.errors.slice( 0, 5 ).join( '\n' );
+					if ( resp.data.errors.length > 5 ) {
+						msg += '\n…et ' + ( resp.data.errors.length - 5 ) + ' autres.';
+					}
+				}
+				$( resultEl ).css( 'white-space', 'pre-line' ).text( msg );
+
+				if ( patchRows ) {
+					// Patch network input cells inline; reload only when some rows were not in DOM
+					var missed = 0;
+					$.each( resp.data.rows || [], function ( _, row ) {
+						$.each( row.fields, function ( field, val ) {
+							if ( val === '' ) return;
+							var $input = $( '.lsb-network-input[data-scope="' + row.scope_id + '"][data-slug="' + row.slug + '"][data-field="' + field + '"]' );
+							if ( $input.length ) {
+								$input.val( val ).data( 'initial-value', val );
+								$input.closest( 'tr' ).removeClass( 'lsb-dirty' );
+							} else {
+								missed++;
+							}
+						} );
+					} );
+					if ( reloadOnMissed && missed > 0 ) {
+						setTimeout( function () { location.reload(); }, 600 );
+					}
+				} else if ( reloadOnSuccess && resp.data.imported > 0 ) {
+					setTimeout( function () { location.reload(); }, 800 );
+				}
+			} else {
+				$( resultEl ).text( resp.data.message || 'Erreur.' );
+			}
+		} ).fail( function () {
+			$( resultEl ).text( 'Erreur réseau.' );
+		} ).always( function () {
+			$btn.prop( 'disabled', false );
+		} );
+	} );
+
+	// =====================================================================
+	// Section 12: Address prefill handler (lsb_prefill_network_addresses)
+	// =====================================================================
+	$( document ).on( 'click', '.lsb-do-address-prefill', function () {
+		var $btn       = $( this );
+		var action     = $btn.data( 'action' );
+		var nonceField = $btn.data( 'nonce-field' );
+		var acfField   = $btn.data( 'acf-field' );
+		var resultEl   = $btn.data( 'result' );
+		var confirmMsg = $btn.data( 'confirm' );
+
+		if ( confirmMsg && ! confirm( confirmMsg ) ) return;
+
+		$btn.prop( 'disabled', true );
+
+		$.post( lsbData.ajaxUrl, {
+			action:    action,
+			nonce:     $( nonceField ).val(),
+			acf_field: $( acfField ).val(),
+		} ).done( function ( r ) {
+			if ( r.success ) {
+				$( resultEl ).text( 'Sites remplis : ' + r.data.filled );
+				if ( r.data.filled > 0 ) {
+					setTimeout( function () { location.reload(); }, 800 );
+				}
+			} else {
+				$( resultEl ).text( r.data.message || 'Erreur.' );
+			}
+		} ).fail( function () {
+			$( resultEl ).text( 'Erreur réseau.' );
+		} ).always( function () {
+			$btn.prop( 'disabled', false );
+		} );
+	} );
+
 }( jQuery, wp ) );
+
+// =====================================================================
+// Section 13: Network scope select-all sync (vanilla JS, no jQuery)
+// =====================================================================
+( function () {
+	function syncCheckboxes( source, targets ) {
+		targets.forEach( function ( cb ) { cb.checked = source.checked; } );
+	}
+
+	document.addEventListener( 'DOMContentLoaded', function () {
+		var all1 = document.getElementById( 'cb-select-all' );
+		var all2 = document.getElementById( 'cb-select-all-2' );
+		var rows = Array.from( document.querySelectorAll( 'input[name="scope_ids[]"]' ) );
+
+		if ( all1 ) {
+			all1.addEventListener( 'change', function () {
+				syncCheckboxes( this, rows );
+				if ( all2 ) all2.checked = this.checked;
+			} );
+		}
+		if ( all2 ) {
+			all2.addEventListener( 'change', function () {
+				syncCheckboxes( this, rows );
+				if ( all1 ) all1.checked = this.checked;
+			} );
+		}
+
+		// Handle bottom bulk action select (mirror to top before submit)
+		var form        = document.getElementById( 'lsb-scopes-form' );
+		var topAction    = document.querySelector( 'select[name="bulk_action"]' );
+		var bottomAction = document.querySelector( 'select[name="bulk_action_bottom"]' );
+		if ( form && bottomAction ) {
+			form.addEventListener( 'submit', function () {
+				if ( bottomAction.value !== '-1' && topAction ) {
+					topAction.value = bottomAction.value;
+				}
+			} );
+		}
+	} );
+}() );
