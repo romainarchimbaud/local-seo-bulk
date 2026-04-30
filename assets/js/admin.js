@@ -242,16 +242,19 @@
 		$( 'input[name="lsb_net_item[]"]' ).prop( 'checked', $( this ).is( ':checked' ) );
 	} );
 
-	// ---- Save all dirty inputs (all fields, all rows) ----
+	// ---- Save all dirty inputs (site rows, network rows, address rows) ----
 	$( document ).on( 'click', '#lsb-save-all', function () {
-		var $btn        = $( this );
-		var siteRows    = [];
-		var networkRows = [];
+		var $btn         = $( this );
+		var siteRows     = [];
+		var networkRows  = [];
+		var addressBlogIds = {};
 
 		$( '.lsb-value-input' ).each( function () {
 			var $input = $( this );
 			if ( ! isInputDirty( $input ) ) return;
-			if ( $input.hasClass( 'lsb-network-input' ) ) {
+			if ( $input.hasClass( 'lsb-address-input' ) ) {
+				addressBlogIds[ $input.data( 'blog-id' ) ] = true;
+			} else if ( $input.hasClass( 'lsb-network-input' ) ) {
 				networkRows.push( {
 					scope_id: $input.data( 'scope' ),
 					slug:     $input.data( 'slug' ),
@@ -268,12 +271,21 @@
 			}
 		} );
 
-		if ( ! siteRows.length && ! networkRows.length ) return;
+		var addressRows = [];
+		$.each( addressBlogIds, function ( blogId ) {
+			var row = { blog_id: blogId };
+			$( '.lsb-address-input[data-blog-id="' + blogId + '"]' ).each( function () {
+				row[ $( this ).data( 'field' ) ] = $( this ).val();
+			} );
+			addressRows.push( row );
+		} );
+
+		if ( ! siteRows.length && ! networkRows.length && ! addressRows.length ) return;
 
 		$btn.prop( 'disabled', true ).text( lsbData.i18n.saving );
 
 		var done  = 0;
-		var total = ( siteRows.length ? 1 : 0 ) + ( networkRows.length ? 1 : 0 );
+		var total = ( siteRows.length ? 1 : 0 ) + ( networkRows.length ? 1 : 0 ) + ( addressRows.length ? 1 : 0 );
 
 		function finish() {
 			done++;
@@ -292,6 +304,9 @@
 		}
 		if ( networkRows.length ) {
 			$.post( lsbData.ajaxUrl, { action: 'lsb_save_network_all', nonce: lsbData.nonce, rows: networkRows } ).always( finish );
+		}
+		if ( addressRows.length ) {
+			$.post( lsbData.ajaxUrl, { action: 'lsb_save_network_address_all', nonce: lsbData.nonce, rows: addressRows } ).always( finish );
 		}
 	} );
 
@@ -335,6 +350,90 @@
 			$forceItem.hide();
 			$forceItem.find( 'input[type="checkbox"]' ).prop( 'checked', false );
 		}
+	} );
+
+	// ---- Address page: save row ----
+	$( document ).on( 'click', '.lsb-save-address-row', function () {
+		var $btn    = $( this );
+		var blogId  = $btn.data( 'blog-id' );
+		var $row    = $btn.closest( 'tr' );
+		var $status = $row.find( '.lsb-row-status' );
+		var data    = { action: 'lsb_save_network_address_row', nonce: lsbData.nonce, blog_id: blogId };
+
+		$row.find( '.lsb-address-input' ).each( function () {
+			data[ $( this ).data( 'field' ) ] = $( this ).val();
+		} );
+
+		$btn.prop( 'disabled', true );
+		$status.removeClass( 'success error' ).html( '<span class="lsb-spinner"></span>' );
+
+		$.post( lsbData.ajaxUrl, data )
+			.done( function ( response ) {
+				if ( response.success ) {
+					$status.addClass( 'success' ).text( lsbData.i18n.saved );
+					$row.find( '.lsb-address-input' ).each( function () {
+						$( this ).data( 'initial-value', $( this ).val() );
+					} );
+					$row.removeClass( 'lsb-dirty' );
+					updateDirtyCounter();
+				} else {
+					$status.addClass( 'error' ).text( lsbData.i18n.error );
+				}
+			} )
+			.fail( function () { $status.addClass( 'error' ).text( lsbData.i18n.error ); } )
+			.always( function () { $btn.prop( 'disabled', false ); } );
+	} );
+
+	// ---- Address page: clear row (all 4 fields empty) ----
+	$( document ).on( 'click', '.lsb-clear-address-row', function () {
+		var $btn    = $( this );
+		var blogId  = $btn.data( 'blog-id' );
+		var $row    = $btn.closest( 'tr' );
+		var $status = $row.find( '.lsb-row-status' );
+
+		$btn.prop( 'disabled', true );
+		$status.removeClass( 'success error' ).html( '<span class="lsb-spinner"></span>' );
+
+		$.post( lsbData.ajaxUrl, {
+			action:      'lsb_save_network_address_row',
+			nonce:       lsbData.nonce,
+			blog_id:     blogId,
+			ville:       '',
+			code_postal: '',
+			adresse:     '',
+			departement: '',
+		} ).done( function ( response ) {
+			if ( response.success ) {
+				$row.find( '.lsb-address-input' ).val( '' ).each( function () {
+					$( this ).data( 'initial-value', '' );
+				} );
+				$row.removeClass( 'lsb-dirty' );
+				updateDirtyCounter();
+				$status.addClass( 'success' ).text( lsbData.i18n.saved );
+			} else {
+				$status.addClass( 'error' ).text( lsbData.i18n.error );
+			}
+		} )
+		.fail( function () { $status.addClass( 'error' ).text( lsbData.i18n.error ); } )
+		.always( function () { $btn.prop( 'disabled', false ); } );
+	} );
+
+	// ---- Address page: bulk clear ----
+	$( document ).on( 'click', '#lsb-address-bulk-apply', function () {
+		if ( $( '#lsb-address-bulk-action' ).val() !== 'lsb_address_bulk_clear' ) return;
+		$( 'input.lsb-address-cb:checked' ).closest( 'tr' ).each( function () {
+			var $row = $( this );
+			$row.find( '.lsb-address-input' ).val( '' );
+			reconcileRowDirty( $row );
+		} );
+		$( 'input.lsb-address-cb' ).prop( 'checked', false );
+		$( '#cb-select-all-address' ).prop( 'checked', false );
+		updateDirtyCounter();
+	} );
+
+	// ---- Address page: select all checkbox ----
+	$( document ).on( 'change', '#cb-select-all-address', function () {
+		$( 'input.lsb-address-cb' ).prop( 'checked', $( this ).is( ':checked' ) );
 	} );
 
 }( jQuery, wp ) );
