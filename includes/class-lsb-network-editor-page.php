@@ -245,11 +245,13 @@ class LSB_Network_Editor_Page {
                                     <td>
                                         <div class="lsb-actions-wrap">
                                             <button type="button" class="button lsb-save-network-row"
+                                                data-action="lsb_save_network_all"
                                                 data-scope="<?php echo esc_attr($active_scope); ?>"
                                                 data-slug="<?php echo esc_attr($slug); ?>">
                                                 <?php esc_html_e('Enregistrer', 'local-seo-bulk'); ?>
                                             </button>
                                             <button type="button" class="button-link lsb-clear-network-row"
+                                                data-action="lsb_save_network_row"
                                                 data-scope="<?php echo esc_attr($active_scope); ?>"
                                                 data-slug="<?php echo esc_attr($slug); ?>"
                                                 data-field="<?php echo esc_attr($active_field); ?>">

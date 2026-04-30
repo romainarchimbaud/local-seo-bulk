@@ -76,42 +76,71 @@
 		}
 	} );
 
-	// ---- Site-level save row (all fields for this row) ----
-	$( document ).on( 'click', '.lsb-save-row', function () {
-		var $btn       = $( this );
-		var entityType = $btn.data( 'entity-type' );
-		var entityId   = $btn.data( 'entity-id' );
-		var $row       = $btn.closest( 'tr' );
-		var $status    = $row.find( '.lsb-row-status' );
-		var rows       = [];
-
-		$row.find( '.lsb-value-input' ).each( function () {
-			rows.push( {
-				field:       $( this ).data( 'field' ),
-				entity_type: entityType,
-				entity_id:   entityId,
-				value:       $( this ).val(),
+	// =====================================================================
+	// Section 7: Unified row save
+	// Handles .lsb-save-row, .lsb-save-network-row, .lsb-save-address-row
+	// Action name is read from data-action on the button.
+	// =====================================================================
+	function collectRowPayload( $row, $btn, action ) {
+		var payload = { action: action, nonce: lsbData.nonce };
+		if ( 'lsb_save_all' === action ) {
+			var entityType = $btn.data( 'entity-type' );
+			var entityId   = $btn.data( 'entity-id' );
+			var rows       = [];
+			$row.find( '.lsb-value-input' ).each( function () {
+				rows.push( {
+					field:       $( this ).data( 'field' ),
+					entity_type: entityType,
+					entity_id:   entityId,
+					value:       $( this ).val(),
+				} );
 			} );
-		} );
+			payload.rows = rows;
+		} else if ( 'lsb_save_network_all' === action ) {
+			var scope = $btn.data( 'scope' );
+			var slug  = $btn.data( 'slug' );
+			var rows  = [];
+			$row.find( '.lsb-network-input' ).each( function () {
+				rows.push( {
+					scope_id: scope,
+					slug:     slug,
+					field:    $( this ).data( 'field' ),
+					value:    $( this ).val(),
+				} );
+			} );
+			payload.rows = rows;
+		} else if ( 'lsb_save_network_address_row' === action ) {
+			payload.blog_id = $btn.data( 'blog-id' );
+			$row.find( '.lsb-address-input' ).each( function () {
+				payload[ $( this ).data( 'field' ) ] = $( this ).val();
+			} );
+		}
+		return payload;
+	}
+
+	$( document ).on( 'click', '.lsb-save-row, .lsb-save-network-row, .lsb-save-address-row', function () {
+		var $btn    = $( this );
+		var $row    = $btn.closest( 'tr' );
+		var action  = $btn.data( 'action' );
+		var $status = $row.find( '.lsb-row-status' );
+		var payload = collectRowPayload( $row, $btn, action );
 
 		$btn.prop( 'disabled', true );
 		$status.removeClass( 'success error' ).html( '<span class="lsb-spinner"></span>' );
 
-		$.post( lsbData.ajaxUrl, {
-			action: 'lsb_save_all',
-			nonce:  lsbData.nonce,
-			rows:   rows,
-		} ).done( function ( response ) {
+		$.post( lsbData.ajaxUrl, payload ).done( function ( response ) {
 			if ( response.success ) {
 				$status.addClass( 'success' ).text( lsbData.i18n.saved );
-				$row.find( '.lsb-value-input' ).each( function () {
+				$row.find( '.lsb-value-input, .lsb-network-input, .lsb-address-input' ).each( function () {
 					$( this ).data( 'initial-value', $( this ).val() );
 				} );
 				$row.removeClass( 'lsb-dirty' );
 				updateDirtyCounter();
-				var $activeInput = $row.find( '.lsb-field-panel[data-field="' + activeField + '"] .lsb-value-input' );
-				if ( $activeInput.length && $activeInput.val() ) {
-					fetchPreview( $activeInput );
+				if ( 'lsb_save_all' === action ) {
+					var $activeInput = $row.find( '.lsb-field-panel[data-field="' + activeField + '"] .lsb-value-input' );
+					if ( $activeInput.length && $activeInput.val() ) {
+						fetchPreview( $activeInput );
+					}
 				}
 			} else {
 				$status.addClass( 'error' ).text( lsbData.i18n.error );
@@ -123,70 +152,63 @@
 		} );
 	} );
 
-	// ---- Network-level save row (all fields for this row) ----
-	$( document ).on( 'click', '.lsb-save-network-row', function () {
+	// =====================================================================
+	// Section 8: Unified row clear
+	// Handles .lsb-clear-row, .lsb-clear-network-row, .lsb-clear-address-row
+	// Action name is read from data-action on the button.
+	// =====================================================================
+	function clearRowPayload( $row, $btn, action ) {
+		var payload = { action: action, nonce: lsbData.nonce };
+		if ( 'lsb_save_all' === action ) {
+			var field = $btn.data( 'field' );
+			payload.rows = [ {
+				field:       field,
+				entity_type: $btn.data( 'entity-type' ),
+				entity_id:   $btn.data( 'entity-id' ),
+				value:       '',
+			} ];
+		} else if ( 'lsb_save_network_row' === action ) {
+			payload.scope_id = $btn.data( 'scope' );
+			payload.slug     = $btn.data( 'slug' );
+			payload.field    = $btn.data( 'field' );
+			payload.value    = '';
+		} else if ( 'lsb_save_network_address_row' === action ) {
+			payload.blog_id     = $btn.data( 'blog-id' );
+			payload.ville       = '';
+			payload.code_postal = '';
+			payload.adresse     = '';
+			payload.departement = '';
+		}
+		return payload;
+	}
+
+	$( document ).on( 'click', '.lsb-clear-row, .lsb-clear-network-row, .lsb-clear-address-row', function () {
 		var $btn    = $( this );
-		var scope   = $btn.data( 'scope' );
-		var slug    = $btn.data( 'slug' );
 		var $row    = $btn.closest( 'tr' );
+		var action  = $btn.data( 'action' );
 		var $status = $row.find( '.lsb-row-status' );
-		var rows    = [];
-
-		$row.find( '.lsb-network-input' ).each( function () {
-			rows.push( {
-				scope_id: scope,
-				slug:     slug,
-				field:    $( this ).data( 'field' ),
-				value:    $( this ).val(),
-			} );
-		} );
+		var payload = clearRowPayload( $row, $btn, action );
 
 		$btn.prop( 'disabled', true );
 		$status.removeClass( 'success error' ).html( '<span class="lsb-spinner"></span>' );
 
-		$.post( lsbData.ajaxUrl, {
-			action: 'lsb_save_network_all',
-			nonce:  lsbData.nonce,
-			rows:   rows,
-		} ).done( function ( response ) {
+		$.post( lsbData.ajaxUrl, payload ).done( function ( response ) {
 			if ( response.success ) {
-				$status.addClass( 'success' ).text( lsbData.i18n.saved );
-				$row.find( '.lsb-network-input' ).each( function () {
-					$( this ).data( 'initial-value', $( this ).val() );
-				} );
-				$row.removeClass( 'lsb-dirty' );
-				updateDirtyCounter();
-			} else {
-				$status.addClass( 'error' ).text( lsbData.i18n.error );
-			}
-		} ).fail( function () {
-			$status.addClass( 'error' ).text( lsbData.i18n.error );
-		} ).always( function () {
-			$btn.prop( 'disabled', false );
-		} );
-	} );
-
-	// ---- Clear site row (active field only) ----
-	$( document ).on( 'click', '.lsb-clear-row', function () {
-		var $btn       = $( this );
-		var field      = $btn.data( 'field' );
-		var entityType = $btn.data( 'entity-type' );
-		var entityId   = $btn.data( 'entity-id' );
-		var $row       = $btn.closest( 'tr' );
-		var $input     = $row.find( '.lsb-value-input[data-field="' + field + '"]' );
-		var $status    = $row.find( '.lsb-row-status' );
-
-		$btn.prop( 'disabled', true );
-		$status.removeClass( 'success error' ).html( '<span class="lsb-spinner"></span>' );
-
-		$.post( lsbData.ajaxUrl, {
-			action: 'lsb_save_all',
-			nonce:  lsbData.nonce,
-			rows:   [ { field: field, entity_type: entityType, entity_id: entityId, value: '' } ],
-		} ).done( function ( response ) {
-			if ( response.success ) {
-				$input.val( '' ).data( 'initial-value', '' );
-				$row.find( '.lsb-field-panel[data-field="' + field + '"] .lsb-preview' ).text( '' );
+				if ( 'lsb_save_all' === action ) {
+					var field  = $btn.data( 'field' );
+					var $input = $row.find( '.lsb-value-input[data-field="' + field + '"]' );
+					$input.val( '' ).data( 'initial-value', '' );
+					$row.find( '.lsb-field-panel[data-field="' + field + '"] .lsb-preview' ).text( '' );
+				} else if ( 'lsb_save_network_row' === action ) {
+					var field  = payload.field;
+					var $input = $row.find( '.lsb-network-input[data-field="' + field + '"]' );
+					$input.val( '' ).data( 'initial-value', '' );
+				} else if ( 'lsb_save_network_address_row' === action ) {
+					$row.find( '.lsb-address-input' ).val( '' ).each( function () {
+						$( this ).data( 'initial-value', '' );
+					} );
+					$row.removeClass( 'lsb-dirty' );
+				}
 				reconcileRowDirty( $row );
 				updateDirtyCounter();
 				$status.addClass( 'success' ).text( lsbData.i18n.saved );
@@ -200,43 +222,12 @@
 		} );
 	} );
 
-	// ---- Clear network row (active field only via AJAX) ----
-	$( document ).on( 'click', '.lsb-clear-network-row', function () {
-		var $btn    = $( this );
-		var scope   = $btn.data( 'scope' );
-		var slug    = $btn.data( 'slug' );
-		var field   = $btn.data( 'field' );
-		var $row    = $btn.closest( 'tr' );
-		var $input  = $row.find( '.lsb-network-input[data-field="' + field + '"]' );
-		var $status = $row.find( '.lsb-row-status' );
+	// =====================================================================
+	// Section 9: Unified bulk clear
+	// Site bulk clear intercepts form submit; network + address share one click handler.
+	// =====================================================================
 
-		$btn.prop( 'disabled', true );
-		$status.removeClass( 'success error' ).html( '<span class="lsb-spinner"></span>' );
-
-		$.post( lsbData.ajaxUrl, {
-			action:   'lsb_save_network_row',
-			nonce:    lsbData.nonce,
-			scope_id: scope,
-			slug:     slug,
-			field:    field,
-			value:    '',
-		} ).done( function ( response ) {
-			if ( response.success ) {
-				$input.val( '' ).data( 'initial-value', '' );
-				reconcileRowDirty( $row );
-				updateDirtyCounter();
-				$status.addClass( 'success' ).text( lsbData.i18n.saved );
-			} else {
-				$status.addClass( 'error' ).text( lsbData.i18n.error );
-			}
-		} ).fail( function () {
-			$status.addClass( 'error' ).text( lsbData.i18n.error );
-		} ).always( function () {
-			$btn.prop( 'disabled', false );
-		} );
-	} );
-
-	// ---- Bulk "Vider" — site-level (intercept WP bulk action form submit) ----
+	// Site-level: intercept WP bulk action form submit
 	$( document ).on( 'submit', '#lsb-editor-form', function ( e ) {
 		var top    = $( 'select[name="action"]' ).val()  || '-1';
 		var bottom = $( 'select[name="action2"]' ).val() || '-1';
@@ -254,16 +245,32 @@
 		updateDirtyCounter();
 	} );
 
-	// ---- Bulk "Vider" — network-level ----
-	$( document ).on( 'click', '#lsb-bulk-apply-net', function () {
-		if ( $( '#lsb-bulk-action-net' ).val() !== 'lsb_bulk_clear' ) return;
-		$( 'input[name="lsb_net_item[]"]:checked' ).closest( 'tr' ).each( function () {
-			var $row = $( this );
-			$row.find( '.lsb-network-input[data-field="' + activeField + '"]' ).val( '' );
-			reconcileRowDirty( $row );
-		} );
-		$( 'input[name="lsb_net_item[]"]' ).prop( 'checked', false );
-		$( '#cb-select-all-net' ).prop( 'checked', false );
+	// Network-level + address-level: click on apply button
+	$( document ).on( 'click', '#lsb-bulk-apply-net, #lsb-address-bulk-apply', function () {
+		var isNet     = $( this ).is( '#lsb-bulk-apply-net' );
+		var actionVal = isNet
+			? $( '#lsb-bulk-action-net' ).val()
+			: $( '#lsb-address-bulk-action' ).val();
+		var expected  = isNet ? 'lsb_bulk_clear' : 'lsb_address_bulk_clear';
+		if ( actionVal !== expected ) return;
+
+		if ( isNet ) {
+			$( 'input[name="lsb_net_item[]"]:checked' ).closest( 'tr' ).each( function () {
+				var $row = $( this );
+				$row.find( '.lsb-network-input[data-field="' + activeField + '"]' ).val( '' );
+				reconcileRowDirty( $row );
+			} );
+			$( 'input[name="lsb_net_item[]"]' ).prop( 'checked', false );
+			$( '#cb-select-all-net' ).prop( 'checked', false );
+		} else {
+			$( 'input.lsb-address-cb:checked' ).closest( 'tr' ).each( function () {
+				var $row = $( this );
+				$row.find( '.lsb-address-input' ).val( '' );
+				reconcileRowDirty( $row );
+			} );
+			$( 'input.lsb-address-cb' ).prop( 'checked', false );
+			$( '#cb-select-all-address' ).prop( 'checked', false );
+		}
 		updateDirtyCounter();
 	} );
 
@@ -394,85 +401,6 @@
 			$forceItem.hide();
 			$forceItem.find( 'input[type="checkbox"]' ).prop( 'checked', false );
 		}
-	} );
-
-	// ---- Address page: save row ----
-	$( document ).on( 'click', '.lsb-save-address-row', function () {
-		var $btn    = $( this );
-		var blogId  = $btn.data( 'blog-id' );
-		var $row    = $btn.closest( 'tr' );
-		var $status = $row.find( '.lsb-row-status' );
-		var data    = { action: 'lsb_save_network_address_row', nonce: lsbData.nonce, blog_id: blogId };
-
-		$row.find( '.lsb-address-input' ).each( function () {
-			data[ $( this ).data( 'field' ) ] = $( this ).val();
-		} );
-
-		$btn.prop( 'disabled', true );
-		$status.removeClass( 'success error' ).html( '<span class="lsb-spinner"></span>' );
-
-		$.post( lsbData.ajaxUrl, data )
-			.done( function ( response ) {
-				if ( response.success ) {
-					$status.addClass( 'success' ).text( lsbData.i18n.saved );
-					$row.find( '.lsb-address-input' ).each( function () {
-						$( this ).data( 'initial-value', $( this ).val() );
-					} );
-					$row.removeClass( 'lsb-dirty' );
-					updateDirtyCounter();
-				} else {
-					$status.addClass( 'error' ).text( lsbData.i18n.error );
-				}
-			} )
-			.fail( function () { $status.addClass( 'error' ).text( lsbData.i18n.error ); } )
-			.always( function () { $btn.prop( 'disabled', false ); } );
-	} );
-
-	// ---- Address page: clear row (all 4 fields empty) ----
-	$( document ).on( 'click', '.lsb-clear-address-row', function () {
-		var $btn    = $( this );
-		var blogId  = $btn.data( 'blog-id' );
-		var $row    = $btn.closest( 'tr' );
-		var $status = $row.find( '.lsb-row-status' );
-
-		$btn.prop( 'disabled', true );
-		$status.removeClass( 'success error' ).html( '<span class="lsb-spinner"></span>' );
-
-		$.post( lsbData.ajaxUrl, {
-			action:      'lsb_save_network_address_row',
-			nonce:       lsbData.nonce,
-			blog_id:     blogId,
-			ville:       '',
-			code_postal: '',
-			adresse:     '',
-			departement: '',
-		} ).done( function ( response ) {
-			if ( response.success ) {
-				$row.find( '.lsb-address-input' ).val( '' ).each( function () {
-					$( this ).data( 'initial-value', '' );
-				} );
-				$row.removeClass( 'lsb-dirty' );
-				updateDirtyCounter();
-				$status.addClass( 'success' ).text( lsbData.i18n.saved );
-			} else {
-				$status.addClass( 'error' ).text( lsbData.i18n.error );
-			}
-		} )
-		.fail( function () { $status.addClass( 'error' ).text( lsbData.i18n.error ); } )
-		.always( function () { $btn.prop( 'disabled', false ); } );
-	} );
-
-	// ---- Address page: bulk clear ----
-	$( document ).on( 'click', '#lsb-address-bulk-apply', function () {
-		if ( $( '#lsb-address-bulk-action' ).val() !== 'lsb_address_bulk_clear' ) return;
-		$( 'input.lsb-address-cb:checked' ).closest( 'tr' ).each( function () {
-			var $row = $( this );
-			$row.find( '.lsb-address-input' ).val( '' );
-			reconcileRowDirty( $row );
-		} );
-		$( 'input.lsb-address-cb' ).prop( 'checked', false );
-		$( '#cb-select-all-address' ).prop( 'checked', false );
-		updateDirtyCounter();
 	} );
 
 	// ---- Address page: select all checkbox ----

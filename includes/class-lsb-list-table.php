@@ -199,13 +199,13 @@ class LSB_List_Table extends WP_List_Table {
 	public function column_actions( $item ) {
 		$entity   = $item['entity'];
 		$save_btn = sprintf(
-			'<button type="button" class="button lsb-save-row" data-entity-type="%s" data-entity-id="%d">%s</button>',
+			'<button type="button" class="button lsb-save-row" data-action="lsb_save_all" data-entity-type="%s" data-entity-id="%d">%s</button>',
 			esc_attr( $entity['type'] ),
 			(int) $entity['id'],
 			esc_html__( 'Enregistrer', 'local-seo-bulk' )
 		);
 		$clear_btn = sprintf(
-			'<button type="button" class="button-link lsb-clear-row" data-entity-type="%s" data-entity-id="%d" data-field="%s">%s</button>',
+			'<button type="button" class="button-link lsb-clear-row" data-action="lsb_save_all" data-entity-type="%s" data-entity-id="%d" data-field="%s">%s</button>',
 			esc_attr( $entity['type'] ),
 			(int) $entity['id'],
 			esc_attr( $this->field ),

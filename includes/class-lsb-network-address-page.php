@@ -181,10 +181,12 @@ class LSB_Network_Address_Page {
 								<td>
 									<div class="lsb-actions-wrap">
 										<button type="button" class="button lsb-save-address-row"
+											data-action="lsb_save_network_address_row"
 											data-blog-id="<?php echo esc_attr( $blog_id ); ?>">
 											<?php esc_html_e( 'Enregistrer', 'local-seo-bulk' ); ?>
 										</button>
 										<button type="button" class="button-link lsb-clear-address-row"
+											data-action="lsb_save_network_address_row"
 											data-blog-id="<?php echo esc_attr( $blog_id ); ?>">
 											<?php esc_html_e( 'Vider', 'local-seo-bulk' ); ?>
 										</button>
