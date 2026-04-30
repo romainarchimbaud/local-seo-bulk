@@ -170,7 +170,7 @@
 .lsb-checkbox-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: .4em .1em;
+    gap: 1em;
 }
 
 .lsb-checkbox-label {
