@@ -46,6 +46,12 @@ class LSB_Ajax {
 		add_action( 'wp_ajax_lsb_csv_template',       [ $this, 'download_csv_template' ] );
 		add_action( 'wp_ajax_lsb_import_network_csv',    [ $this, 'import_network_csv' ] );
 		add_action( 'wp_ajax_lsb_network_csv_template',  [ $this, 'download_network_csv_template' ] );
+		// Network address management
+		add_action( 'wp_ajax_lsb_save_network_address_row',    [ $this, 'save_network_address_row' ] );
+		add_action( 'wp_ajax_lsb_save_network_address_all',    [ $this, 'save_network_address_all' ] );
+		add_action( 'wp_ajax_lsb_import_network_address_csv',  [ $this, 'import_network_address_csv' ] );
+		add_action( 'wp_ajax_lsb_export_network_address_csv',  [ $this, 'export_network_address_csv' ] );
+		add_action( 'wp_ajax_lsb_prefill_network_addresses',   [ $this, 'prefill_network_addresses_from_acf' ] );
 	}
 
 	// ---- Site-level ----
@@ -479,5 +485,180 @@ class LSB_Ajax {
 
 		// finfo unavailable and extension already passed above.
 		return true;
+	}
+
+	// ---- Network address management ----
+
+	public function save_network_address_row() {
+		$this->verify_nonce( true );
+
+		$blog_id     = (int) ( $_POST['blog_id']     ?? 0 );
+		$ville       = sanitize_text_field( wp_unslash( $_POST['ville']       ?? '' ) );
+		$code_postal = sanitize_text_field( wp_unslash( $_POST['code_postal'] ?? '' ) );
+		$adresse     = sanitize_text_field( wp_unslash( $_POST['adresse']     ?? '' ) );
+		$departement = sanitize_text_field( wp_unslash( $_POST['departement'] ?? '' ) );
+
+		if ( ! $blog_id ) {
+			wp_send_json_error( [ 'message' => __( 'blog_id invalide.', 'local-seo-bulk' ) ] );
+		}
+
+		$all             = get_site_option( 'lsb_network_seo_addresses', [] );
+		$all[ $blog_id ] = [
+			'ville'       => $ville,
+			'code_postal' => $code_postal,
+			'adresse'     => $adresse,
+			'departement' => $departement,
+		];
+		update_site_option( 'lsb_network_seo_addresses', $all );
+		wp_send_json_success( [ 'message' => __( 'Enregistré.', 'local-seo-bulk' ) ] );
+	}
+
+	public function save_network_address_all() {
+		$this->verify_nonce( true );
+
+		$rows = $_POST['rows'] ?? [];
+		if ( ! is_array( $rows ) ) {
+			wp_send_json_error( [ 'message' => __( 'Données invalides.', 'local-seo-bulk' ) ] );
+		}
+
+		$all = get_site_option( 'lsb_network_seo_addresses', [] );
+		foreach ( $rows as $row_data ) {
+			$blog_id = (int) ( $row_data['blog_id'] ?? 0 );
+			if ( ! $blog_id ) continue;
+			$all[ $blog_id ] = [
+				'ville'       => sanitize_text_field( wp_unslash( $row_data['ville']       ?? '' ) ),
+				'code_postal' => sanitize_text_field( wp_unslash( $row_data['code_postal'] ?? '' ) ),
+				'adresse'     => sanitize_text_field( wp_unslash( $row_data['adresse']     ?? '' ) ),
+				'departement' => sanitize_text_field( wp_unslash( $row_data['departement'] ?? '' ) ),
+			];
+		}
+		update_site_option( 'lsb_network_seo_addresses', $all );
+		wp_send_json_success( [ 'message' => __( 'Tout enregistré.', 'local-seo-bulk' ) ] );
+	}
+
+	public function import_network_address_csv() {
+		check_ajax_referer( 'lsb_ajax_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_network_options' ) ) {
+			wp_send_json_error( [ 'message' => __( 'Permission refusée.', 'local-seo-bulk' ) ] );
+		}
+
+		if ( empty( $_FILES['lsb_csv']['tmp_name'] ) ) {
+			wp_send_json_error( [ 'message' => __( 'Aucun fichier reçu.', 'local-seo-bulk' ) ] );
+		}
+
+		$filename = isset( $_FILES['lsb_csv']['name'] ) ? sanitize_file_name( $_FILES['lsb_csv']['name'] ) : '';
+		if ( ! $this->validate_csv_mime_type( $_FILES['lsb_csv']['tmp_name'], $filename ) ) {
+			wp_send_json_error( [ 'message' => __( 'Le fichier doit être un CSV valide.', 'local-seo-bulk' ) ] );
+		}
+
+		$content = file_get_contents( $_FILES['lsb_csv']['tmp_name'] ); // phpcs:ignore
+		$lines   = preg_split( '/\r\n|\r|\n/', trim( $content ) );
+
+		if ( empty( $lines ) ) {
+			wp_send_json_error( [ 'message' => __( 'Fichier vide.', 'local-seo-bulk' ) ] );
+		}
+
+		// Auto-detect delimiter (semicolon preferred for French content)
+		$first = $lines[0];
+		$delim = ( substr_count( $first, ';' ) >= substr_count( $first, ',' ) ) ? ';' : ',';
+
+		$header = str_getcsv( array_shift( $lines ), $delim );
+		$header = array_map( 'trim', $header );
+		$map    = array_flip( $header );
+
+		if ( ! isset( $map['blog_id'] ) ) {
+			wp_send_json_error( [ 'message' => __( 'Colonne blog_id manquante.', 'local-seo-bulk' ) ] );
+		}
+
+		$all      = get_site_option( 'lsb_network_seo_addresses', [] );
+		$imported = 0;
+		$skipped  = 0;
+
+		foreach ( $lines as $line ) {
+			$line = trim( $line );
+			if ( '' === $line || 0 === strpos( $line, '#' ) ) continue;
+
+			$cols    = str_getcsv( $line, $delim );
+			$blog_id = (int) ( $cols[ $map['blog_id'] ] ?? 0 );
+			if ( ! $blog_id ) { $skipped++; continue; }
+
+			$all[ $blog_id ] = [
+				'ville'       => sanitize_text_field( $cols[ $map['ville']       ?? PHP_INT_MAX ] ?? '' ),
+				'code_postal' => sanitize_text_field( $cols[ $map['code_postal'] ?? PHP_INT_MAX ] ?? '' ),
+				'adresse'     => sanitize_text_field( $cols[ $map['adresse']     ?? PHP_INT_MAX ] ?? '' ),
+				'departement' => sanitize_text_field( $cols[ $map['departement'] ?? PHP_INT_MAX ] ?? '' ),
+			];
+			$imported++;
+		}
+
+		update_site_option( 'lsb_network_seo_addresses', $all );
+		wp_send_json_success( [ 'imported' => $imported, 'skipped' => $skipped ] );
+	}
+
+	public function export_network_address_csv() {
+		if ( ! check_ajax_referer( 'lsb_ajax_nonce', 'nonce', false ) ) wp_die( 'Nonce invalide.' );
+		if ( ! current_user_can( 'manage_network_options' ) ) wp_die( 'Permission refusée.' );
+
+		$all   = get_site_option( 'lsb_network_seo_addresses', [] );
+		$sites = get_sites( [ 'number' => 0, 'deleted' => 0 ] );
+
+		header( 'Content-Type: text/csv; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="lsb-network-addresses.csv"' );
+
+		$out = fopen( 'php://output', 'w' ); // phpcs:ignore
+		fputcsv( $out, [ 'blog_id', 'ville', 'code_postal', 'adresse', 'departement' ], ';' );
+		foreach ( $sites as $site ) {
+			$blog_id = (int) $site->blog_id;
+			$addr    = $all[ $blog_id ] ?? [];
+			fputcsv( $out, [
+				$blog_id,
+				$addr['ville']       ?? '',
+				$addr['code_postal'] ?? '',
+				$addr['adresse']     ?? '',
+				$addr['departement'] ?? '',
+			], ';' );
+		}
+		fclose( $out ); // phpcs:ignore
+		exit;
+	}
+
+	public function prefill_network_addresses_from_acf() {
+		$this->verify_nonce( true );
+
+		if ( ! function_exists( 'get_field' ) ) {
+			wp_send_json_error( [ 'message' => __( 'ACF non disponible.', 'local-seo-bulk' ) ] );
+		}
+
+		$acf_field = sanitize_text_field( wp_unslash( $_POST['acf_field'] ?? 'adresse' ) );
+		update_site_option( 'lsb_network_address_acf_field', $acf_field );
+
+		$sites  = get_sites( [ 'number' => 0, 'deleted' => 0 ] );
+		$all    = get_site_option( 'lsb_network_seo_addresses', [] );
+		$filled = 0;
+
+		foreach ( $sites as $site ) {
+			$blog_id = (int) $site->blog_id;
+			$current = $all[ $blog_id ] ?? [];
+
+			if ( ! empty( $current['ville'] ) && ! empty( $current['code_postal'] ) ) continue;
+
+			switch_to_blog( $blog_id );
+			$acf_value = get_field( $acf_field, 'option' );
+			restore_current_blog();
+
+			if ( ! is_array( $acf_value ) ) continue;
+
+			$street          = trim( ( $acf_value['street_number'] ?? '' ) . ' ' . ( $acf_value['street_name'] ?? '' ) );
+			$all[ $blog_id ] = [
+				'ville'       => empty( $current['ville'] )       ? sanitize_text_field( $acf_value['city']      ?? '' ) : $current['ville'],
+				'code_postal' => empty( $current['code_postal'] ) ? sanitize_text_field( $acf_value['post_code'] ?? '' ) : $current['code_postal'],
+				'adresse'     => empty( $current['adresse'] )     ? sanitize_text_field( $street )                       : $current['adresse'],
+				'departement' => $current['departement'] ?? '',
+			];
+			$filled++;
+		}
+
+		update_site_option( 'lsb_network_seo_addresses', $all );
+		wp_send_json_success( [ 'filled' => $filled ] );
 	}
 }
