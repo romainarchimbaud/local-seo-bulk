@@ -18,6 +18,7 @@ class LSB_Plugin {
 	public $yoast_integration;
 	public $h1_replacer;
 	public $ajax;
+	public $csv_handler;
 
 	public $network_store;
 	public $scope_matcher;
@@ -56,6 +57,7 @@ class LSB_Plugin {
 		require_once $inc . 'class-lsb-yoast-integration.php';
 		require_once $inc . 'class-lsb-h1-replacer.php';
 		require_once $inc . 'class-lsb-ajax.php';
+		require_once $inc . 'class-lsb-csv-handler.php';
 		require_once $inc . 'class-lsb-list-table.php';
 		require_once $inc . 'class-lsb-editor-page.php';
 		require_once $inc . 'class-lsb-admin-menu.php';
@@ -78,7 +80,8 @@ class LSB_Plugin {
 		$this->h1_replacer       = new LSB_H1_Replacer( $this->resolver );
 		$this->network_cpt_index    = new LSB_Network_CPT_Index();
 		$this->network_entity_index = new LSB_Network_Entity_Index( $this->network_store, $this->scope_matcher );
-		$this->ajax              = new LSB_Ajax( $this->meta_store, $this->token_resolver, $this->network_store, $this->scope_matcher, $this->resolver, $this->network_entity_index );
+		$this->csv_handler       = new LSB_CSV_Handler( $this->meta_store, $this->network_store, $this->network_entity_index, $this->scope_matcher );
+		$this->ajax              = new LSB_Ajax( $this->meta_store, $this->token_resolver, $this->network_store, $this->scope_matcher, $this->resolver, $this->network_entity_index, $this->csv_handler );
 		$this->editor_page       = new LSB_Editor_Page( $this->meta_store, $this->token_resolver, $this->network_store, $this->scope_matcher, $this->resolver );
 		$this->admin_menu        = new LSB_Admin_Menu( $this->settings, $this->editor_page );
 		$this->network_scope_page   = new LSB_Network_Scope_Page( $this->network_store, $this->network_cpt_index );
