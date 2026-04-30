@@ -47,11 +47,15 @@ class LSB_Ajax {
 		add_action( 'wp_ajax_lsb_import_network_csv',    [ $this, 'import_network_csv' ] );
 		add_action( 'wp_ajax_lsb_network_csv_template',  [ $this, 'download_network_csv_template' ] );
 		// Network address management
-		add_action( 'wp_ajax_lsb_save_network_address_row',    [ $this, 'save_network_address_row' ] );
-		add_action( 'wp_ajax_lsb_save_network_address_all',    [ $this, 'save_network_address_all' ] );
-		add_action( 'wp_ajax_lsb_import_network_address_csv',  [ $this, 'import_network_address_csv' ] );
-		add_action( 'wp_ajax_lsb_export_network_address_csv',  [ $this, 'export_network_address_csv' ] );
-		add_action( 'wp_ajax_lsb_prefill_network_addresses',   [ $this, 'prefill_network_addresses_from_acf' ] );
+		add_action( 'wp_ajax_lsb_save_network_address_row',        [ $this, 'save_network_address_row' ] );
+		add_action( 'wp_ajax_lsb_save_network_address_all',        [ $this, 'save_network_address_all' ] );
+		add_action( 'wp_ajax_lsb_import_network_address_csv',      [ $this, 'import_network_address_csv' ] );
+		add_action( 'wp_ajax_lsb_export_network_address_csv',      [ $this, 'export_network_address_csv' ] );
+		add_action( 'wp_ajax_lsb_network_address_csv_template',    [ $this, 'download_network_address_csv_template' ] );
+		add_action( 'wp_ajax_lsb_prefill_network_addresses',       [ $this, 'prefill_network_addresses_from_acf' ] );
+		// CSV exports (data)
+		add_action( 'wp_ajax_lsb_export_csv',         [ $this, 'export_csv' ] );
+		add_action( 'wp_ajax_lsb_export_network_csv', [ $this, 'export_network_csv' ] );
 	}
 
 	// ---- Site-level ----
@@ -287,9 +291,6 @@ class LSB_Ajax {
 		check_ajax_referer( 'lsb_ajax_nonce', 'nonce' );
 
 		$lsb_object = sanitize_text_field( wp_unslash( $_GET['lsb_object'] ?? '' ) );
-		$parts      = explode( '|', $lsb_object, 2 );
-		$kind       = $parts[0] ?? '';
-		$type_slug  = isset( $parts[1] ) ? sanitize_key( $parts[1] ) : '';
 		$fname      = sanitize_file_name( str_replace( '|', '-', $lsb_object ) );
 
 		header( 'Content-Type: text/csv; charset=utf-8' );
@@ -297,7 +298,27 @@ class LSB_Ajax {
 		header( 'Pragma: no-cache' );
 
 		$out = fopen( 'php://output', 'w' );
-		fputcsv( $out, [ 'slug', 'h1', 'title', 'desc' ] );
+		fputcsv( $out, [ 'slug', 'h1', 'title', 'desc' ], ';' );
+		fclose( $out );
+		exit;
+	}
+
+	public function export_csv() {
+		if ( ! current_user_can( 'manage_options' ) ) wp_die( 'Forbidden' );
+		check_ajax_referer( 'lsb_ajax_nonce', 'nonce' );
+
+		$lsb_object = sanitize_text_field( wp_unslash( $_GET['lsb_object'] ?? '' ) );
+		$parts      = explode( '|', $lsb_object, 2 );
+		$kind       = $parts[0] ?? '';
+		$type_slug  = isset( $parts[1] ) ? sanitize_key( $parts[1] ) : '';
+		$fname      = sanitize_file_name( str_replace( '|', '-', $lsb_object ) );
+
+		header( 'Content-Type: text/csv; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="lsb-export-' . $fname . '.csv"' );
+		header( 'Pragma: no-cache' );
+
+		$out = fopen( 'php://output', 'w' );
+		fputcsv( $out, [ 'slug', 'h1', 'title', 'desc' ], ';' );
 
 		$objects = [];
 		if ( 'post_type' === $kind && $type_slug ) {
@@ -320,26 +341,22 @@ class LSB_Ajax {
 			}
 		}
 
-		if ( empty( $objects ) ) {
-			fputcsv( $out, [ '# exemple-slug', 'Mon H1 %%lsb_ville%%', 'Mon titre | %%sitename%%', 'Ma description.' ] );
-		} else {
-			foreach ( $objects as $obj ) {
-				if ( $obj instanceof WP_Post ) {
-					$permalink = get_permalink( $obj );
-					$slug      = $permalink ? wp_parse_url( $permalink, PHP_URL_PATH ) : $obj->post_name;
-					$entity    = [ 'type' => 'post', 'id' => $obj->ID ];
-				} else {
-					$term_link = get_term_link( $obj );
-					$slug      = ! is_wp_error( $term_link ) ? wp_parse_url( $term_link, PHP_URL_PATH ) : $obj->slug;
-					$entity    = [ 'type' => 'term', 'id' => $obj->term_id ];
-				}
-				fputcsv( $out, [
-					$slug,
-					$this->meta_store->get( $entity, 'h1' ) ?: '',
-					$this->meta_store->get( $entity, 'title' ) ?: '',
-					$this->meta_store->get( $entity, 'desc' ) ?: '',
-				] );
+		foreach ( $objects as $obj ) {
+			if ( $obj instanceof WP_Post ) {
+				$permalink = get_permalink( $obj );
+				$slug      = $permalink ? wp_parse_url( $permalink, PHP_URL_PATH ) : $obj->post_name;
+				$entity    = [ 'type' => 'post', 'id' => $obj->ID ];
+			} else {
+				$term_link = get_term_link( $obj );
+				$slug      = ! is_wp_error( $term_link ) ? wp_parse_url( $term_link, PHP_URL_PATH ) : $obj->slug;
+				$entity    = [ 'type' => 'term', 'id' => $obj->term_id ];
 			}
+			fputcsv( $out, [
+				$slug,
+				$this->meta_store->get( $entity, 'h1' ) ?: '',
+				$this->meta_store->get( $entity, 'title' ) ?: '',
+				$this->meta_store->get( $entity, 'desc' ) ?: '',
+			], ';' );
 		}
 
 		fclose( $out );
@@ -354,12 +371,25 @@ class LSB_Ajax {
 		header( 'Content-Disposition: attachment; filename="lsb-network-import.csv"' );
 		header( 'Pragma: no-cache' );
 
+		$out = fopen( 'php://output', 'w' );
+		fputcsv( $out, [ 'scope_id', 'slug', 'h1', 'title', 'desc' ], ';' );
+		fclose( $out );
+		exit;
+	}
+
+	public function export_network_csv() {
+		if ( ! current_user_can( 'manage_network_options' ) ) wp_die( 'Forbidden' );
+		check_ajax_referer( 'lsb_ajax_nonce', 'nonce' );
+
+		header( 'Content-Type: text/csv; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="lsb-network-export.csv"' );
+		header( 'Pragma: no-cache' );
+
 		$out   = fopen( 'php://output', 'w' );
 		$index = $this->entity_index->get_index();
 
-		fputcsv( $out, [ 'scope_id', 'slug', 'h1', 'title', 'desc' ] );
+		fputcsv( $out, [ 'scope_id', 'slug', 'h1', 'title', 'desc' ], ';' );
 
-		$has_rows = false;
 		foreach ( $index as $scope_id => $rows ) {
 			foreach ( $rows as $slug => $row ) {
 				fputcsv( $out, [
@@ -368,13 +398,8 @@ class LSB_Ajax {
 					$this->network_store->get_entity_value( $scope_id, $slug, 'h1' ) ?: '',
 					$this->network_store->get_entity_value( $scope_id, $slug, 'title' ) ?: '',
 					$this->network_store->get_entity_value( $scope_id, $slug, 'desc' ) ?: '',
-				] );
-				$has_rows = true;
+				], ';' );
 			}
-		}
-
-		if ( ! $has_rows ) {
-			fputcsv( $out, [ '# produits-parents', 'exemple-slug', 'Mon H1 %%lsb_ville%%', 'Mon titre | %%sitename%%', 'Ma description.' ] );
 		}
 
 		fclose( $out );
@@ -622,6 +647,20 @@ class LSB_Ajax {
 			], ';' );
 		}
 		fclose( $out ); // phpcs:ignore
+		exit;
+	}
+
+	public function download_network_address_csv_template() {
+		if ( ! current_user_can( 'manage_network_options' ) ) wp_die( 'Forbidden' );
+		check_ajax_referer( 'lsb_ajax_nonce', 'nonce' );
+
+		header( 'Content-Type: text/csv; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="lsb-network-addresses-template.csv"' );
+		header( 'Pragma: no-cache' );
+
+		$out = fopen( 'php://output', 'w' );
+		fputcsv( $out, [ 'blog_id', 'slug', 'ville', 'code_postal', 'adresse', 'departement' ], ';' );
+		fclose( $out );
 		exit;
 	}
 
