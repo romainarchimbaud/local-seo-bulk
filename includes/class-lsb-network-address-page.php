@@ -59,6 +59,11 @@ class LSB_Network_Address_Page {
 			'nonce'  => wp_create_nonce( 'lsb_ajax_nonce' ),
 		], admin_url( 'admin-ajax.php' ) );
 
+		$template_url = add_query_arg( [
+			'action' => 'lsb_network_address_csv_template',
+			'nonce'  => wp_create_nonce( 'lsb_ajax_nonce' ),
+		], admin_url( 'admin-ajax.php' ) );
+
 		wp_enqueue_script( 'lsb-admin' );
 		wp_enqueue_style( 'lsb-admin' );
 		?>
@@ -69,7 +74,9 @@ class LSB_Network_Address_Page {
 			<!-- Import dialog -->
 			<div id="lsb-address-import-dialog" style="display:none;margin:1em 0;padding:1em;border:1px solid #ccd0d4;background:#fff">
 				<h3 style="margin-top:0"><?php esc_html_e( 'Importer des adresses SEO depuis un CSV', 'local-seo-bulk' ); ?></h3>
-				<p class="description"><?php esc_html_e( 'Colonnes : blog_id, ville, code_postal, adresse, departement. Délimiteur : point-virgule.', 'local-seo-bulk' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Colonnes : blog_id, ville, code_postal, adresse, departement. Délimiteur : point-virgule.', 'local-seo-bulk' ); ?>
+					<a href="<?php echo esc_url( $template_url ); ?>"><?php esc_html_e( 'Télécharger le modèle CSV', 'local-seo-bulk' ); ?></a>
+				</p>
 				<input type="file" id="lsb-address-csv-file" accept=".csv" style="display:block;margin:1.5em 0.5em">
 				<input type="hidden" id="lsb-address-import-nonce" value="<?php echo esc_attr( wp_create_nonce( 'lsb_ajax_nonce' ) ); ?>">
 				<button type="button" class="button button-primary" id="lsb-do-address-import"><?php esc_html_e( 'Importer', 'local-seo-bulk' ); ?></button>
@@ -104,6 +111,7 @@ class LSB_Network_Address_Page {
 				<div class="lsb-scope-actions">
 					<button type="button" class="button" id="lsb-open-address-import"><?php esc_html_e( 'Importer CSV', 'local-seo-bulk' ); ?></button>
 					<a href="<?php echo esc_url( $export_url ); ?>" class="button"><?php esc_html_e( 'Exporter CSV', 'local-seo-bulk' ); ?></a>
+					<a href="<?php echo esc_url( $template_url ); ?>" class="button"><?php esc_html_e( 'Télécharger le modèle', 'local-seo-bulk' ); ?></a>
 					<button type="button" class="button" id="lsb-open-address-prefill"><?php esc_html_e( 'Pré-remplir ACF', 'local-seo-bulk' ); ?></button>
 					<button type="button" class="button button-primary" id="lsb-save-all"><?php esc_html_e( 'Tout enregistrer', 'local-seo-bulk' ); ?></button>
 					<span class="lsb-dirty-count" id="lsb-dirty-count"></span>
@@ -193,8 +201,11 @@ class LSB_Network_Address_Page {
 			<script>
 			(function($) {
 				$(function() {
-					// Import dialog
-					$('#lsb-open-address-import').on('click', function() { $('#lsb-address-import-dialog').toggle(); });
+					// Import dialog (closes prefill panel if open)
+					$('#lsb-open-address-import').on('click', function() {
+						$('#lsb-address-prefill-panel').hide();
+						$('#lsb-address-import-dialog').toggle();
+					});
 					$('#lsb-close-address-import').on('click', function() { $('#lsb-address-import-dialog').hide(); });
 					$('#lsb-do-address-import').on('click', function() {
 						var file = $('#lsb-address-csv-file')[0].files[0];
@@ -217,8 +228,11 @@ class LSB_Network_Address_Page {
 							.always(function() { $('#lsb-do-address-import').prop('disabled', false); });
 					});
 
-					// Prefill panel
-					$('#lsb-open-address-prefill').on('click', function() { $('#lsb-address-prefill-panel').toggle(); });
+					// Prefill panel (closes import dialog if open)
+					$('#lsb-open-address-prefill').on('click', function() {
+						$('#lsb-address-import-dialog').hide();
+						$('#lsb-address-prefill-panel').toggle();
+					});
 					$('#lsb-close-address-prefill').on('click', function() { $('#lsb-address-prefill-panel').hide(); });
 					$('#lsb-do-address-prefill').on('click', function() {
 						if (!confirm(<?php echo json_encode( __( 'Pré-remplir les entrées vides depuis ACF ? Les entrées existantes ne seront pas modifiées.', 'local-seo-bulk' ) ); ?>)) return;

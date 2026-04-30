@@ -81,6 +81,15 @@ class LSB_Network_Editor_Page {
         $index    = $this->entity_index->get_index();
         $base_url = network_admin_url('admin.php?page=' . self::PAGE_SLUG);
 
+        $export_url   = add_query_arg( [
+            'action' => 'lsb_export_network_csv',
+            'nonce'  => wp_create_nonce( 'lsb_ajax_nonce' ),
+        ], admin_url( 'admin-ajax.php' ) );
+        $template_url = add_query_arg( [
+            'action' => 'lsb_network_csv_template',
+            'nonce'  => wp_create_nonce( 'lsb_ajax_nonce' ),
+        ], admin_url( 'admin-ajax.php' ) );
+
         wp_enqueue_script('lsb-admin');
         wp_enqueue_style('lsb-admin');
 ?>
@@ -188,6 +197,8 @@ class LSB_Network_Editor_Page {
                 </nav>
                 <div class="lsb-scope-actions">
                     <button type="button" class="button" id="lsb-open-network-import"><?php esc_html_e('Importer CSV', 'local-seo-bulk'); ?></button>
+                    <a href="<?php echo esc_url( $export_url ); ?>" class="button"><?php esc_html_e('Exporter CSV', 'local-seo-bulk'); ?></a>
+                    <a href="<?php echo esc_url( $template_url ); ?>" class="button"><?php esc_html_e('Télécharger le modèle', 'local-seo-bulk'); ?></a>
                     <button type="button" class="button button-primary" id="lsb-save-all"><?php esc_html_e('Tout enregistrer', 'local-seo-bulk'); ?></button>
                     <span class="lsb-dirty-count" id="lsb-dirty-count"></span>
                 </div>

@@ -79,6 +79,17 @@ class LSB_Editor_Page {
         $base_url = admin_url('admin.php?page=lsb-editor');
 
         $field_tabs = ['h1' => 'H1', 'title' => 'Meta title', 'desc' => 'Meta description'];
+
+        $export_url   = $active_object_value ? add_query_arg( [
+            'action'     => 'lsb_export_csv',
+            'lsb_object' => $active_object_value,
+            'nonce'      => wp_create_nonce( 'lsb_ajax_nonce' ),
+        ], admin_url( 'admin-ajax.php' ) ) : '';
+        $template_url = $active_object_value ? add_query_arg( [
+            'action'     => 'lsb_csv_template',
+            'lsb_object' => $active_object_value,
+            'nonce'      => wp_create_nonce( 'lsb_ajax_nonce' ),
+        ], admin_url( 'admin-ajax.php' ) ) : '';
 ?>
         <div class="wrap lsb-editor-wrap">
 
@@ -157,6 +168,8 @@ class LSB_Editor_Page {
                     <div class="lsb-bulk-actions">
                         <?php if ($active_object_value) : ?>
                             <button type="button" class="button" id="lsb-open-import"><?php esc_html_e('Importer CSV', 'local-seo-bulk'); ?></button>
+                            <a href="<?php echo esc_url( $export_url ); ?>" class="button"><?php esc_html_e('Exporter CSV', 'local-seo-bulk'); ?></a>
+                            <a href="<?php echo esc_url( $template_url ); ?>" class="button"><?php esc_html_e('Télécharger le modèle', 'local-seo-bulk'); ?></a>
                         <?php endif; ?>
                         <button type="button" class="button button-primary" id="lsb-save-all"><?php esc_html_e('Tout enregistrer', 'local-seo-bulk'); ?></button>
                         <span class="lsb-dirty-count" id="lsb-dirty-count"></span>
