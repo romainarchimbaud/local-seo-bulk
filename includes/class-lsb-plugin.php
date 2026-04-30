@@ -26,6 +26,7 @@ class LSB_Plugin {
 	public $network_entity_index;
 	public $network_scope_page;
 	public $network_editor_page;
+	public $network_address_page;
 
 	public static function instance() {
 		if ( null === self::$instance ) {
@@ -62,6 +63,7 @@ class LSB_Plugin {
 		require_once $inc . 'class-lsb-network-entity-index.php';
 		require_once $inc . 'class-lsb-network-scope-page.php';
 		require_once $inc . 'class-lsb-network-editor-page.php';
+		require_once $inc . 'class-lsb-network-address-page.php';
 	}
 
 	private function instantiate() {
@@ -81,6 +83,7 @@ class LSB_Plugin {
 		$this->admin_menu        = new LSB_Admin_Menu( $this->settings, $this->editor_page );
 		$this->network_scope_page   = new LSB_Network_Scope_Page( $this->network_store, $this->network_cpt_index );
 		$this->network_editor_page  = new LSB_Network_Editor_Page( $this->network_store, $this->network_entity_index, $this->token_resolver );
+		$this->network_address_page = new LSB_Network_Address_Page();
 	}
 
 	private function boot() {
@@ -92,9 +95,11 @@ class LSB_Plugin {
 		if ( is_network_admin() || ( defined( 'DOING_AJAX' ) && DOING_AJAX ) ) {
 			$this->network_scope_page->init();
 			$this->network_editor_page->init();
+			$this->network_address_page->init();
 		} else {
 			$this->network_scope_page->init();
 			$this->network_editor_page->init();
+			$this->network_address_page->init();
 		}
 
 		$this->admin_menu->init();
@@ -135,6 +140,9 @@ class LSB_Plugin {
 	}
 
 	public static function activate( $network_wide = false ) {
+		if ( false === get_site_option( 'lsb_network_seo_addresses' ) ) {
+			add_site_option( 'lsb_network_seo_addresses', [] );
+		}
 		if ( $network_wide && is_multisite() ) {
 			$sites = get_sites( [ 'fields' => 'ids', 'number' => 0 ] );
 			foreach ( $sites as $site_id ) {
@@ -148,13 +156,6 @@ class LSB_Plugin {
 	}
 
 	private static function activate_site() {
-		if ( false === get_option( 'lsb_address' ) ) {
-			add_option( 'lsb_address', [
-				'adresse'     => '',
-				'code_postal' => '',
-				'ville'       => '',
-			] );
-		}
 		if ( false === get_option( 'lsb_site_kill_switch' ) ) {
 			add_option( 'lsb_site_kill_switch', 0 );
 		}
