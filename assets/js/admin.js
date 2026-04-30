@@ -168,14 +168,36 @@
 
 	// ---- Clear site row (active field only) ----
 	$( document ).on( 'click', '.lsb-clear-row', function () {
-		var $btn   = $( this );
-		var field  = $btn.data( 'field' );
-		var $row   = $btn.closest( 'tr' );
-		var $input = $row.find( '.lsb-value-input[data-field="' + field + '"]' );
-		$input.val( '' );
-		$row.find( '.lsb-field-panel[data-field="' + field + '"] .lsb-preview' ).text( '' );
-		reconcileRowDirty( $row );
-		updateDirtyCounter();
+		var $btn       = $( this );
+		var field      = $btn.data( 'field' );
+		var entityType = $btn.data( 'entity-type' );
+		var entityId   = $btn.data( 'entity-id' );
+		var $row       = $btn.closest( 'tr' );
+		var $input     = $row.find( '.lsb-value-input[data-field="' + field + '"]' );
+		var $status    = $row.find( '.lsb-row-status' );
+
+		$btn.prop( 'disabled', true );
+		$status.removeClass( 'success error' ).html( '<span class="lsb-spinner"></span>' );
+
+		$.post( lsbData.ajaxUrl, {
+			action: 'lsb_save_all',
+			nonce:  lsbData.nonce,
+			rows:   [ { field: field, entity_type: entityType, entity_id: entityId, value: '' } ],
+		} ).done( function ( response ) {
+			if ( response.success ) {
+				$input.val( '' ).data( 'initial-value', '' );
+				$row.find( '.lsb-field-panel[data-field="' + field + '"] .lsb-preview' ).text( '' );
+				reconcileRowDirty( $row );
+				updateDirtyCounter();
+				$status.addClass( 'success' ).text( lsbData.i18n.saved );
+			} else {
+				$status.addClass( 'error' ).text( lsbData.i18n.error );
+			}
+		} ).fail( function () {
+			$status.addClass( 'error' ).text( lsbData.i18n.error );
+		} ).always( function () {
+			$btn.prop( 'disabled', false );
+		} );
 	} );
 
 	// ---- Clear network row (active field only via AJAX) ----
