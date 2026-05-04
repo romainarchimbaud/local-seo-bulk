@@ -210,7 +210,7 @@ class LSB_Network_Editor_Page {
                                         <strong><?php echo esc_html($row['sample_title']); ?></strong>
                                     </td>
                                     <td>
-                                        <code style="font-size:.85em;color:#666"><?php echo esc_html($slug); ?></code>
+                                        <code style="font-size:.85em;color:#666"><?php echo esc_html( $row['url_path'] ?? $slug ); ?></code>
                                     </td>
                                     <td style="color:#999;font-size:.85em;white-space:nowrap">
                                         <?php echo count($row['sites']); ?> sites

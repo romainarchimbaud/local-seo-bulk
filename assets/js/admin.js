@@ -212,6 +212,7 @@
 				reconcileRowDirty( $row );
 				updateDirtyCounter();
 				$status.addClass( 'success' ).text( lsbData.i18n.saved );
+				showAdminNotice( lsbData.i18n.saved, 'success' );
 			} else {
 				$status.addClass( 'error' ).text( lsbData.i18n.error );
 			}
@@ -243,6 +244,7 @@
 		$( 'input[name="lsb_item[]"]' ).prop( 'checked', false );
 		$( '#cb-select-all-1, #cb-select-all-2' ).prop( 'checked', false );
 		updateDirtyCounter();
+		$( '#lsb-save-all' ).trigger( 'click' );
 	} );
 
 	// Network-level + address-level: click on apply button
@@ -272,6 +274,7 @@
 			$( '#cb-select-all-address' ).prop( 'checked', false );
 		}
 		updateDirtyCounter();
+		$( '#lsb-save-all' ).trigger( 'click' );
 	} );
 
 	// ---- Select all — network-level ----
@@ -502,9 +505,32 @@
 					} );
 					if ( reloadOnMissed && missed > 0 ) {
 						setTimeout( function () { location.reload(); }, 600 );
+					} else if ( resp.data.imported > 0 ) {
+						var dialogSel = $btn.data( 'dialog' );
+						setTimeout( function () {
+							if ( dialogSel ) { $( dialogSel ).hide(); }
+							showAdminNotice( 'Importé : ' + resp.data.imported + ' — Ignoré : ' + resp.data.skipped, 'success' );
+						}, 500 );
 					}
 				} else if ( reloadOnSuccess && resp.data.imported > 0 ) {
-					setTimeout( function () { location.reload(); }, 800 );
+					var dialogSel2 = $btn.data( 'dialog' );
+					if ( resp.data.rows && resp.data.rows.length ) {
+						$.each( resp.data.rows, function ( _, row ) {
+							$.each( [ 'ville', 'code_postal', 'adresse', 'departement' ], function ( _, field ) {
+								var $input = $( '.lsb-address-input[data-blog-id="' + row.blog_id + '"][data-field="' + field + '"]' );
+								if ( $input.length ) {
+									$input.val( row[ field ] ).data( 'initial-value', row[ field ] );
+									$input.closest( 'tr' ).removeClass( 'lsb-dirty' );
+								}
+							} );
+						} );
+						setTimeout( function () {
+							if ( dialogSel2 ) { $( dialogSel2 ).hide(); }
+							showAdminNotice( 'Importé : ' + resp.data.imported + ' — Ignoré : ' + resp.data.skipped, 'success' );
+						}, 500 );
+					} else {
+						setTimeout( function () { location.reload(); }, 800 );
+					}
 				}
 			} else {
 				$( resultEl ).text( resp.data.message || 'Erreur.' );

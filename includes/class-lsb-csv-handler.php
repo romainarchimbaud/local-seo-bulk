@@ -402,6 +402,7 @@ class LSB_CSV_Handler {
 		$all      = get_site_option( 'lsb_network_seo_addresses', [] );
 		$imported = 0;
 		$skipped  = 0;
+		$rows     = [];
 
 		while ( ( $cols = fgetcsv( $handle, 0, $delim ) ) !== false ) {
 			if ( empty( $cols[0] ) || str_starts_with( trim( $cols[0] ), '#' ) ) continue;
@@ -415,12 +416,13 @@ class LSB_CSV_Handler {
 				'adresse'     => sanitize_text_field( wp_unslash( $cols[ $map['adresse']     ?? PHP_INT_MAX ] ?? '' ) ),
 				'departement' => sanitize_text_field( wp_unslash( $cols[ $map['departement'] ?? PHP_INT_MAX ] ?? '' ) ),
 			];
+			$rows[]   = array_merge( [ 'blog_id' => $blog_id ], $all[ $blog_id ] );
 			$imported++;
 		}
 
 		fclose( $handle ); // phpcs:ignore
 		update_site_option( 'lsb_network_seo_addresses', $all );
-		wp_send_json_success( [ 'imported' => $imported, 'skipped' => $skipped ] );
+		wp_send_json_success( [ 'imported' => $imported, 'skipped' => $skipped, 'rows' => $rows ] );
 	}
 
 	public function export_network_address_csv() {
