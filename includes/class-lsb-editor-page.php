@@ -191,7 +191,7 @@ class LSB_Editor_Page {
                         <input type="file" id="lsb-csv-file" accept=".csv" style="display:block;margin:1.5em 0.5em;">
                         <input type="hidden" id="lsb-import-object" value="<?php echo esc_attr($active_object_value); ?>">
                         <input type="hidden" id="lsb-import-nonce" value="<?php echo esc_attr(wp_create_nonce('lsb_ajax_nonce')); ?>">
-                        <button type="button" class="button button-primary lsb-do-import" id="lsb-do-import" data-action="lsb_import_csv" data-dialog="#lsb-import-dialog" data-file-field="#lsb-csv-file" data-object-field="#lsb-import-object" data-nonce-field="#lsb-import-nonce" data-result="#lsb-import-result" data-reload-on-success="1" data-empty-msg="<?php esc_attr_e( 'Veuillez sélectionner un fichier CSV.', 'local-seo-bulk' ); ?>"><?php esc_html_e('Importer', 'local-seo-bulk'); ?></button>
+                        <button type="button" class="button button-primary lsb-do-import" id="lsb-do-import" data-action="lsb_import_csv" data-dialog="#lsb-import-dialog" data-file-field="#lsb-csv-file" data-object-field="#lsb-import-object" data-nonce-field="#lsb-import-nonce" data-result="#lsb-import-result" data-patch-site-rows="1" data-empty-msg="<?php esc_attr_e( 'Veuillez sélectionner un fichier CSV.', 'local-seo-bulk' ); ?>"><?php esc_html_e('Importer', 'local-seo-bulk'); ?></button>
                         <button type="button" class="button lsb-panel-close" id="lsb-close-import" data-target="#lsb-import-dialog"><?php esc_html_e('Annuler', 'local-seo-bulk'); ?></button>
                         <p id="lsb-import-result" style="margin-top:.5em"></p>
                     </div>

@@ -48,9 +48,33 @@ class LSB_CSV_Handler {
 			wp_send_json_error( [ 'message' => __( 'Impossible de lire le fichier.', 'local-seo-bulk' ) ] );
 		}
 
+		// Pre-build a slug→object map for scope imports (url_path and bare slug keys).
+		$scope_objects_map = null;
+		if ( 'scope' === $kind ) {
+			$scopes_list = $this->network_store->get_scopes();
+			$scope_def   = $scopes_list[ $type_slug ] ?? null;
+			if ( $scope_def ) {
+				$scope_objects_map = [];
+				foreach ( $this->scope_matcher->find_matching_objects( $scope_def, 500 ) as $sobj ) {
+					if ( $sobj instanceof WP_Post ) {
+						$permalink = get_permalink( $sobj );
+						$url_path  = $permalink ? wp_parse_url( $permalink, PHP_URL_PATH ) : null;
+						if ( $url_path ) $scope_objects_map[ $url_path ] = $sobj;
+						$scope_objects_map[ $sobj->post_name ] = $sobj;
+					} else {
+						$term_link = get_term_link( $sobj );
+						$url_path  = ! is_wp_error( $term_link ) ? wp_parse_url( $term_link, PHP_URL_PATH ) : null;
+						if ( $url_path ) $scope_objects_map[ $url_path ] = $sobj;
+						$scope_objects_map[ $sobj->slug ] = $sobj;
+					}
+				}
+			}
+		}
+
 		$imported = 0;
 		$skipped  = 0;
 		$errors   = [];
+		$rows     = [];
 		$line_num = 0;
 
 		while ( ( $row = fgetcsv( $fh, 0, $delimiter ) ) !== false ) {
@@ -66,8 +90,8 @@ class LSB_CSV_Handler {
 			$object = null;
 			if ( 'post_type' === $kind ) {
 				if ( str_starts_with( $slug, '/' ) ) {
-					// URL path slug (new format): resolve via url_to_postid
-					$parsed  = wp_parse_url( network_home_url() );
+					// URL path slug: resolve via url_to_postid on the current site.
+					$parsed  = wp_parse_url( home_url() );
 					$origin  = $parsed['scheme'] . '://' . $parsed['host'];
 					if ( ! empty( $parsed['port'] ) ) $origin .= ':' . $parsed['port'];
 					$post_id = url_to_postid( $origin . '/' . ltrim( $slug, '/' ) );
@@ -92,6 +116,8 @@ class LSB_CSV_Handler {
 				$term_slug = str_starts_with( $slug, '/' ) ? basename( rtrim( $slug, '/' ) ) : sanitize_title( $slug );
 				$term      = get_term_by( 'slug', $term_slug, $type_slug );
 				$object    = $term ?: null;
+			} elseif ( 'scope' === $kind ) {
+				$object = $scope_objects_map !== null ? ( $scope_objects_map[ $slug ] ?? null ) : null;
 			}
 
 			if ( ! $object ) {
@@ -108,6 +134,11 @@ class LSB_CSV_Handler {
 			if ( '' !== $title ) $this->meta_store->update( $entity, 'title', $title );
 			if ( '' !== $desc  ) $this->meta_store->update( $entity, 'desc',  $desc  );
 
+			$rows[] = [
+				'entity_type' => $entity['type'],
+				'entity_id'   => $entity['id'],
+				'fields'      => [ 'h1' => $h1, 'title' => $title, 'desc' => $desc ],
+			];
 			$imported++;
 		}
 
@@ -117,6 +148,7 @@ class LSB_CSV_Handler {
 			'imported' => $imported,
 			'skipped'  => $skipped,
 			'errors'   => $errors,
+			'rows'     => $rows,
 		] );
 	}
 

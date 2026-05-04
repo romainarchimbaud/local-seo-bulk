@@ -512,6 +512,30 @@
 							showAdminNotice( 'Importé : ' + resp.data.imported + ' — Ignoré : ' + resp.data.skipped, 'success' );
 						}, 500 );
 					}
+				} else if ( $btn.data( 'patch-site-rows' ) ) {
+					// Patch site-level value inputs inline by entity type+id+field
+					var missedSite = 0;
+					$.each( resp.data.rows || [], function ( _, row ) {
+						$.each( row.fields, function ( field, val ) {
+							if ( val === '' ) return;
+							var $input = $( '.lsb-value-input[data-entity-type="' + row.entity_type + '"][data-entity-id="' + row.entity_id + '"][data-field="' + field + '"]' );
+							if ( $input.length ) {
+								$input.val( val ).data( 'initial-value', val );
+								$input.closest( 'tr' ).removeClass( 'lsb-dirty' );
+							} else {
+								missedSite++;
+							}
+						} );
+					} );
+					var dialogSelSite = $btn.data( 'dialog' );
+					if ( missedSite > 0 ) {
+						setTimeout( function () { location.reload(); }, 600 );
+					} else {
+						setTimeout( function () {
+							if ( dialogSelSite ) { $( dialogSelSite ).hide(); }
+							showAdminNotice( 'Importé : ' + resp.data.imported + ' — Ignoré : ' + resp.data.skipped, 'success' );
+						}, 500 );
+					}
 				} else if ( reloadOnSuccess && resp.data.imported > 0 ) {
 					var dialogSel2 = $btn.data( 'dialog' );
 					if ( resp.data.rows && resp.data.rows.length ) {
