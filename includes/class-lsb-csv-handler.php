@@ -125,6 +125,9 @@ class LSB_CSV_Handler {
 		check_ajax_referer( 'lsb_ajax_nonce', 'nonce' );
 
 		$lsb_object = sanitize_text_field( wp_unslash( $_GET['lsb_object'] ?? '' ) );
+		$parts      = explode( '|', $lsb_object, 2 );
+		$kind       = $parts[0] ?? '';
+		$type_slug  = isset( $parts[1] ) ? sanitize_key( $parts[1] ) : '';
 		$fname      = sanitize_file_name( str_replace( '|', '-', $lsb_object ) );
 
 		header( 'Content-Type: text/csv; charset=utf-8' );
@@ -132,7 +135,40 @@ class LSB_CSV_Handler {
 		header( 'Pragma: no-cache' );
 
 		$out = fopen( 'php://output', 'w' );
-		fputcsv( $out, [ 'slug', 'h1', 'title', 'desc' ], ';' );
+		fputcsv( $out, [ 'slug', 'h1', 'title', 'desc' ], ',' );
+
+		$objects = [];
+		if ( 'post_type' === $kind && $type_slug ) {
+			$objects = get_posts( [
+				'post_type'      => $type_slug,
+				'post_status'    => 'publish',
+				'posts_per_page' => 500,
+				'no_found_rows'  => true,
+				'orderby'        => 'title',
+				'order'          => 'ASC',
+			] );
+		} elseif ( 'taxonomy' === $kind && $type_slug ) {
+			$objects = get_terms( [ 'taxonomy' => $type_slug, 'hide_empty' => false, 'number' => 500, 'orderby' => 'name', 'order' => 'ASC' ] );
+			if ( is_wp_error( $objects ) ) $objects = [];
+		} elseif ( 'scope' === $kind && $type_slug ) {
+			$scopes = $this->network_store->get_scopes();
+			$scope  = $scopes[ $type_slug ] ?? null;
+			if ( $scope ) {
+				$objects = $this->scope_matcher->find_matching_objects( $scope, 500 );
+			}
+		}
+
+		foreach ( $objects as $obj ) {
+			if ( $obj instanceof WP_Post ) {
+				$permalink = get_permalink( $obj );
+				$slug      = $permalink ? wp_parse_url( $permalink, PHP_URL_PATH ) : $obj->post_name;
+			} else {
+				$term_link = get_term_link( $obj );
+				$slug      = ! is_wp_error( $term_link ) ? wp_parse_url( $term_link, PHP_URL_PATH ) : $obj->slug;
+			}
+			fputcsv( $out, [ $slug, '', '', '' ], ',' );
+		}
+
 		fclose( $out );
 		exit;
 	}
@@ -152,7 +188,7 @@ class LSB_CSV_Handler {
 		header( 'Pragma: no-cache' );
 
 		$out = fopen( 'php://output', 'w' );
-		fputcsv( $out, [ 'slug', 'h1', 'title', 'desc' ], ';' );
+		fputcsv( $out, [ 'slug', 'h1', 'title', 'desc' ], ',' );
 
 		$objects = [];
 		if ( 'post_type' === $kind && $type_slug ) {
@@ -190,7 +226,7 @@ class LSB_CSV_Handler {
 				$this->meta_store->get( $entity, 'h1' ) ?: '',
 				$this->meta_store->get( $entity, 'title' ) ?: '',
 				$this->meta_store->get( $entity, 'desc' ) ?: '',
-			], ';' );
+			], ',' );
 		}
 
 		fclose( $out );
@@ -201,12 +237,38 @@ class LSB_CSV_Handler {
 		if ( ! current_user_can( 'manage_network_options' ) ) wp_die( 'Forbidden' );
 		check_ajax_referer( 'lsb_ajax_nonce', 'nonce' );
 
+		$scope_id = sanitize_key( $_GET['lsb_scope'] ?? '' );
+		$scopes   = $this->network_store->get_scopes();
+
+		if ( $scope_id && isset( $scopes[ $scope_id ] ) ) {
+			$scopes_to_export = [ $scope_id => $scopes[ $scope_id ] ];
+		} else {
+			$scopes_to_export = $scopes;
+		}
+
+		$fname = $scope_id ? 'lsb-network-' . $scope_id . '-template.csv' : 'lsb-network-template.csv';
+
 		header( 'Content-Type: text/csv; charset=utf-8' );
-		header( 'Content-Disposition: attachment; filename="lsb-network-import.csv"' );
+		header( 'Content-Disposition: attachment; filename="' . $fname . '"' );
 		header( 'Pragma: no-cache' );
 
 		$out = fopen( 'php://output', 'w' );
-		fputcsv( $out, [ 'scope_id', 'slug', 'h1', 'title', 'desc' ], ';' );
+		fputcsv( $out, [ 'scope_id', 'slug', 'h1', 'title', 'desc' ], ',' );
+
+		foreach ( $scopes_to_export as $sid => $scope ) {
+			$objects = $this->scope_matcher->find_matching_objects( $scope, 500 );
+			foreach ( $objects as $obj ) {
+				if ( $obj instanceof WP_Post ) {
+					$permalink = get_permalink( $obj );
+					$slug      = $permalink ? wp_parse_url( $permalink, PHP_URL_PATH ) : $obj->post_name;
+				} else {
+					$term_link = get_term_link( $obj );
+					$slug      = ! is_wp_error( $term_link ) ? wp_parse_url( $term_link, PHP_URL_PATH ) : $obj->slug;
+				}
+				fputcsv( $out, [ $sid, $slug, '', '', '' ], ',' );
+			}
+		}
+
 		fclose( $out );
 		exit;
 	}
@@ -222,17 +284,17 @@ class LSB_CSV_Handler {
 		$out   = fopen( 'php://output', 'w' );
 		$index = $this->entity_index->get_index();
 
-		fputcsv( $out, [ 'scope_id', 'slug', 'h1', 'title', 'desc' ], ';' );
+		fputcsv( $out, [ 'scope_id', 'slug', 'h1', 'title', 'desc' ], ',' );
 
 		foreach ( $index as $scope_id => $rows ) {
-			foreach ( $rows as $slug => $row ) {
+			foreach ( $rows as $slug => $_ ) {
 				fputcsv( $out, [
 					$scope_id,
 					$slug,
 					$this->network_store->get_entity_value( $scope_id, $slug, 'h1' ) ?: '',
 					$this->network_store->get_entity_value( $scope_id, $slug, 'title' ) ?: '',
 					$this->network_store->get_entity_value( $scope_id, $slug, 'desc' ) ?: '',
-				], ';' );
+				], ',' );
 			}
 		}
 
@@ -270,8 +332,11 @@ class LSB_CSV_Handler {
 			if ( 1 === $line_num ) continue; // skip header
 			if ( empty( $row[0] ) || str_starts_with( trim( $row[0] ), '#' ) ) continue;
 
-			$scope_id = sanitize_key( trim( $row[0] ) );
-			$slug     = sanitize_title( trim( $row[1] ?? '' ) );
+			$scope_id  = sanitize_key( trim( $row[0] ) );
+			$raw_slug  = trim( $row[1] ?? '' );
+			$slug      = str_starts_with( $raw_slug, '/' )
+				? sanitize_title( basename( rtrim( $raw_slug, '/' ) ) )
+				: sanitize_title( $raw_slug );
 			$h1       = sanitize_text_field( wp_unslash( trim( $row[2] ?? '' ) ) );
 			$title    = sanitize_text_field( wp_unslash( trim( $row[3] ?? '' ) ) );
 			$desc     = sanitize_text_field( wp_unslash( trim( $row[4] ?? '' ) ) );
@@ -367,7 +432,7 @@ class LSB_CSV_Handler {
 		header( 'Pragma: no-cache' );
 
 		$out = fopen( 'php://output', 'w' ); // phpcs:ignore
-		fputcsv( $out, [ 'blog_id', 'ville', 'code_postal', 'adresse', 'departement' ], ';' );
+		fputcsv( $out, [ 'blog_id', 'ville', 'code_postal', 'adresse', 'departement' ], ',' );
 		foreach ( $sites as $site ) {
 			$blog_id = (int) $site->blog_id;
 			$addr    = $all[ $blog_id ] ?? [];
@@ -377,7 +442,7 @@ class LSB_CSV_Handler {
 				$addr['code_postal'] ?? '',
 				$addr['adresse']     ?? '',
 				$addr['departement'] ?? '',
-			], ';' );
+			], ',' );
 		}
 		fclose( $out ); // phpcs:ignore
 		exit;
@@ -391,8 +456,18 @@ class LSB_CSV_Handler {
 		header( 'Content-Disposition: attachment; filename="lsb-network-addresses-template.csv"' );
 		header( 'Pragma: no-cache' );
 
-		$out = fopen( 'php://output', 'w' );
-		fputcsv( $out, [ 'blog_id', 'slug', 'ville', 'code_postal', 'adresse', 'departement' ], ';' );
+		$sites = get_sites( [ 'number' => 0, 'deleted' => 0 ] );
+		$out   = fopen( 'php://output', 'w' );
+
+		fputcsv( $out, [ 'blog_id', 'slug', 'ville', 'code_postal', 'adresse', 'departement' ], ',' );
+
+		foreach ( $sites as $site ) {
+			$blog_id = (int) $site->blog_id;
+			$details = get_blog_details( $blog_id );
+			$slug    = $details ? sanitize_title( $details->blogname ) : '';
+			fputcsv( $out, [ $blog_id, $slug, '', '', '', '' ], ',' );
+		}
+
 		fclose( $out );
 		exit;
 	}

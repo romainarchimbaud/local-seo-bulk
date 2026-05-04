@@ -86,8 +86,9 @@ class LSB_Network_Editor_Page {
             'nonce'  => wp_create_nonce( 'lsb_ajax_nonce' ),
         ], admin_url( 'admin-ajax.php' ) );
         $template_url = add_query_arg( [
-            'action' => 'lsb_network_csv_template',
-            'nonce'  => wp_create_nonce( 'lsb_ajax_nonce' ),
+            'action'    => 'lsb_network_csv_template',
+            'nonce'     => wp_create_nonce( 'lsb_ajax_nonce' ),
+            'lsb_scope' => $active_scope,
         ], admin_url( 'admin-ajax.php' ) );
 
         wp_enqueue_script('lsb-admin');
