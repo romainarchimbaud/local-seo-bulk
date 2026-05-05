@@ -8,10 +8,11 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 class LSB_Yoast_Integration {
 
 	private $resolver;
-	private $address = null;
+	private $token_resolver;
 
-	public function __construct( LSB_Resolver $resolver ) {
-		$this->resolver = $resolver;
+	public function __construct( LSB_Resolver $resolver, LSB_Token_Resolver $token_resolver ) {
+		$this->resolver       = $resolver;
+		$this->token_resolver = $token_resolver;
 	}
 
 	public function init() {
@@ -26,22 +27,22 @@ class LSB_Yoast_Integration {
 		if ( ! function_exists( 'wpseo_register_var_replacement' ) ) return;
 
 		wpseo_register_var_replacement( '%%lsb_ville%%', function() {
-			$a = $this->get_address();
+			$a = $this->token_resolver->get_address();
 			return $a['ville'] ?? '';
 		}, 'advanced', __( 'Ville (Local SEO Bulk)', 'local-seo-bulk' ) );
 
 		wpseo_register_var_replacement( '%%lsb_code_postal%%', function() {
-			$a = $this->get_address();
+			$a = $this->token_resolver->get_address();
 			return $a['code_postal'] ?? '';
 		}, 'advanced', __( 'Code postal (Local SEO Bulk)', 'local-seo-bulk' ) );
 
 		wpseo_register_var_replacement( '%%lsb_adresse%%', function() {
-			$a = $this->get_address();
+			$a = $this->token_resolver->get_address();
 			return $a['adresse'] ?? '';
 		}, 'advanced', __( 'Adresse (Local SEO Bulk)', 'local-seo-bulk' ) );
 
 		wpseo_register_var_replacement( '%%lsb_departement%%', function() {
-			$a = $this->get_address();
+			$a = $this->token_resolver->get_address();
 			return $a['departement'] ?? '';
 		}, 'advanced', __( 'Département (Local SEO Bulk)', 'local-seo-bulk' ) );
 	}
@@ -64,13 +65,5 @@ class LSB_Yoast_Integration {
 
 	private function is_killed() {
 		return ! empty( get_option( 'lsb_site_kill_switch', 0 ) );
-	}
-
-	private function get_address() {
-		if ( null === $this->address ) {
-			$all           = get_site_option( 'lsb_network_seo_addresses', [] );
-			$this->address = $all[ get_current_blog_id() ] ?? [];
-		}
-		return $this->address;
 	}
 }

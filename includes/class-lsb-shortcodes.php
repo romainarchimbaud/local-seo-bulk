@@ -9,11 +9,12 @@ class LSB_Shortcodes {
 
 	private $meta_store;
 	private $resolver;
-	private $address = null;
+	private $token_resolver;
 
-	public function __construct( LSB_Meta_Store $meta_store, LSB_Resolver $resolver ) {
-		$this->meta_store = $meta_store;
-		$this->resolver   = $resolver;
+	public function __construct( LSB_Meta_Store $meta_store, LSB_Resolver $resolver, LSB_Token_Resolver $token_resolver ) {
+		$this->meta_store     = $meta_store;
+		$this->resolver       = $resolver;
+		$this->token_resolver = $token_resolver;
 	}
 
 	public function register() {
@@ -25,22 +26,22 @@ class LSB_Shortcodes {
 	}
 
 	public function shortcode_ville( $atts ) {
-		$address = $this->get_address();
+		$address = $this->token_resolver->get_address();
 		return esc_html( $address['ville'] ?? '' );
 	}
 
 	public function shortcode_code_postal( $atts ) {
-		$address = $this->get_address();
+		$address = $this->token_resolver->get_address();
 		return esc_html( $address['code_postal'] ?? '' );
 	}
 
 	public function shortcode_adresse( $atts ) {
-		$address = $this->get_address();
+		$address = $this->token_resolver->get_address();
 		return esc_html( $address['adresse'] ?? '' );
 	}
 
 	public function shortcode_departement( $atts ) {
-		$address = $this->get_address();
+		$address = $this->token_resolver->get_address();
 		return esc_html( $address['departement'] ?? '' );
 	}
 
@@ -49,13 +50,5 @@ class LSB_Shortcodes {
 		if ( ! $post instanceof WP_Post ) return '';
 		$h1 = $this->resolver->resolve_full( $post, 'h1' );
 		return esc_html( $h1 );
-	}
-
-	private function get_address() {
-		if ( null === $this->address ) {
-			$all           = get_site_option( 'lsb_network_seo_addresses', [] );
-			$this->address = $all[ get_current_blog_id() ] ?? [];
-		}
-		return $this->address;
 	}
 }

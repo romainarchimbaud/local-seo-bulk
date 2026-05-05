@@ -93,7 +93,7 @@ class LSB_Token_Resolver {
 		return '-';
 	}
 
-	private function get_address() {
+	public function get_address() {
 		if ( null === $this->address ) {
 			$all           = get_site_option( 'lsb_network_seo_addresses', [] );
 			$this->address = $all[ get_current_blog_id() ] ?? [];

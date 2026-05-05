@@ -75,8 +75,8 @@ class LSB_Plugin {
 		$this->token_resolver    = new LSB_Token_Resolver();
 		$this->resolver          = new LSB_Resolver( $this->meta_store, $this->network_store, $this->scope_matcher, $this->token_resolver );
 		$this->settings          = new LSB_Settings( $this->network_store );
-		$this->shortcodes        = new LSB_Shortcodes( $this->meta_store, $this->resolver );
-		$this->yoast_integration = new LSB_Yoast_Integration( $this->resolver );
+		$this->shortcodes        = new LSB_Shortcodes( $this->meta_store, $this->resolver, $this->token_resolver );
+		$this->yoast_integration = new LSB_Yoast_Integration( $this->resolver, $this->token_resolver );
 		$this->h1_replacer       = new LSB_H1_Replacer( $this->resolver );
 		$this->network_cpt_index    = new LSB_Network_CPT_Index();
 		$this->network_entity_index = new LSB_Network_Entity_Index( $this->network_store, $this->scope_matcher );

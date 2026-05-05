@@ -1,5 +1,5 @@
 /* global lsbData, jQuery */
-( function ( $, wp ) {
+( function ( $ ) {
 	'use strict';
 
 	var activeField = 'h1';
@@ -30,6 +30,49 @@
 		$( '.wp-header-end' ).after( $notice );
 		$notice.on( 'click', '.notice-dismiss', function () { $notice.fadeOut( 200, function () { $notice.remove(); } ); } );
 		setTimeout( function () { $notice.fadeOut( 400, function () { $notice.remove(); } ); }, 5000 );
+	}
+
+	// ---- Shared helpers ----
+
+	function resetInitialValue( $inputs, value ) {
+		$inputs.each( function () {
+			$( this ).data( 'initial-value', value !== undefined ? value : $( this ).val() );
+		} );
+	}
+
+	function setRowStatus( $status, state, msg ) {
+		$status.removeClass( 'success error' );
+		if ( state === 'loading' ) {
+			$status.html( '<span class="lsb-spinner"></span>' );
+		} else {
+			$status.addClass( state ).text( msg );
+		}
+	}
+
+	function importSummary( resp ) {
+		return 'Importé : ' + resp.data.imported + ' — Ignoré : ' + resp.data.skipped;
+	}
+
+	function closeDialogAndNotify( dialogSel, msg ) {
+		setTimeout( function () {
+			if ( dialogSel ) { $( dialogSel ).hide(); }
+			showAdminNotice( msg, 'success' );
+		}, 500 );
+	}
+
+	function patchInputRows( rows, buildSelector ) {
+		var missed = 0;
+		$.each( rows || [], function ( _, row ) {
+			$.each( row.fields, function ( field, val ) {
+				if ( val === '' ) return;
+				var $input = $( buildSelector( row, field ) );
+				if ( $input.length ) {
+					$input.val( val ).data( 'initial-value', val );
+					$input.closest( 'tr' ).removeClass( 'lsb-dirty' );
+				} else { missed++; }
+			} );
+		} );
+		return missed;
 	}
 
 	$( function () {
@@ -126,14 +169,12 @@
 		var payload = collectRowPayload( $row, $btn, action );
 
 		$btn.prop( 'disabled', true );
-		$status.removeClass( 'success error' ).html( '<span class="lsb-spinner"></span>' );
+		setRowStatus( $status, 'loading' );
 
 		$.post( lsbData.ajaxUrl, payload ).done( function ( response ) {
 			if ( response.success ) {
-				$status.addClass( 'success' ).text( lsbData.i18n.saved );
-				$row.find( '.lsb-value-input, .lsb-network-input, .lsb-address-input' ).each( function () {
-					$( this ).data( 'initial-value', $( this ).val() );
-				} );
+				setRowStatus( $status, 'success', lsbData.i18n.saved );
+				resetInitialValue( $row.find( '.lsb-value-input, .lsb-network-input, .lsb-address-input' ) );
 				$row.removeClass( 'lsb-dirty' );
 				updateDirtyCounter();
 				if ( 'lsb_save_all' === action ) {
@@ -143,10 +184,10 @@
 					}
 				}
 			} else {
-				$status.addClass( 'error' ).text( lsbData.i18n.error );
+				setRowStatus( $status, 'error', lsbData.i18n.error );
 			}
 		} ).fail( function () {
-			$status.addClass( 'error' ).text( lsbData.i18n.error );
+			setRowStatus( $status, 'error', lsbData.i18n.error );
 		} ).always( function () {
 			$btn.prop( 'disabled', false );
 		} );
@@ -190,34 +231,36 @@
 		var payload = clearRowPayload( $row, $btn, action );
 
 		$btn.prop( 'disabled', true );
-		$status.removeClass( 'success error' ).html( '<span class="lsb-spinner"></span>' );
+		setRowStatus( $status, 'loading' );
 
 		$.post( lsbData.ajaxUrl, payload ).done( function ( response ) {
 			if ( response.success ) {
 				if ( 'lsb_save_all' === action ) {
 					var field  = $btn.data( 'field' );
 					var $input = $row.find( '.lsb-value-input[data-field="' + field + '"]' );
-					$input.val( '' ).data( 'initial-value', '' );
+					$input.val( '' );
+					resetInitialValue( $input, '' );
 					$row.find( '.lsb-field-panel[data-field="' + field + '"] .lsb-preview' ).text( '' );
 				} else if ( 'lsb_save_network_row' === action ) {
 					var field  = payload.field;
 					var $input = $row.find( '.lsb-network-input[data-field="' + field + '"]' );
-					$input.val( '' ).data( 'initial-value', '' );
+					$input.val( '' );
+					resetInitialValue( $input, '' );
 				} else if ( 'lsb_save_network_address_row' === action ) {
-					$row.find( '.lsb-address-input' ).val( '' ).each( function () {
-						$( this ).data( 'initial-value', '' );
-					} );
+					var $inputs = $row.find( '.lsb-address-input' );
+					$inputs.val( '' );
+					resetInitialValue( $inputs, '' );
 					$row.removeClass( 'lsb-dirty' );
 				}
 				reconcileRowDirty( $row );
 				updateDirtyCounter();
-				$status.addClass( 'success' ).text( lsbData.i18n.saved );
+				setRowStatus( $status, 'success', lsbData.i18n.saved );
 				showAdminNotice( lsbData.i18n.saved, 'success' );
 			} else {
-				$status.addClass( 'error' ).text( lsbData.i18n.error );
+				setRowStatus( $status, 'error', lsbData.i18n.error );
 			}
 		} ).fail( function () {
-			$status.addClass( 'error' ).text( lsbData.i18n.error );
+			setRowStatus( $status, 'error', lsbData.i18n.error );
 		} ).always( function () {
 			$btn.prop( 'disabled', false );
 		} );
@@ -333,9 +376,7 @@
 			done++;
 			if ( done >= total ) {
 				if ( errors === 0 ) {
-					$( '.lsb-value-input' ).each( function () {
-						$( this ).data( 'initial-value', $( this ).val() );
-					} );
+					resetInitialValue( $( '.lsb-value-input' ) );
 					$( '.lsb-dirty' ).removeClass( 'lsb-dirty' );
 					updateDirtyCounter();
 				}
@@ -489,55 +530,27 @@
 				$( resultEl ).css( 'white-space', 'pre-line' ).text( msg );
 
 				if ( patchRows ) {
-					// Patch network input cells inline; reload only when some rows were not in DOM
-					var missed = 0;
-					$.each( resp.data.rows || [], function ( _, row ) {
-						$.each( row.fields, function ( field, val ) {
-							if ( val === '' ) return;
-							var $input = $( '.lsb-network-input[data-scope="' + row.scope_id + '"][data-slug="' + row.slug + '"][data-field="' + field + '"]' );
-							if ( $input.length ) {
-								$input.val( val ).data( 'initial-value', val );
-								$input.closest( 'tr' ).removeClass( 'lsb-dirty' );
-							} else {
-								missed++;
-							}
-						} );
+					// Network scope import: patch inline, reload only when some rows missed
+					var missed = patchInputRows( resp.data.rows, function ( row, field ) {
+						return '.lsb-network-input[data-scope="' + row.scope_id + '"][data-slug="' + row.slug + '"][data-field="' + field + '"]';
 					} );
 					if ( reloadOnMissed && missed > 0 ) {
 						setTimeout( function () { location.reload(); }, 600 );
 					} else if ( resp.data.imported > 0 ) {
-						var dialogSel = $btn.data( 'dialog' );
-						setTimeout( function () {
-							if ( dialogSel ) { $( dialogSel ).hide(); }
-							showAdminNotice( 'Importé : ' + resp.data.imported + ' — Ignoré : ' + resp.data.skipped, 'success' );
-						}, 500 );
+						closeDialogAndNotify( $btn.data( 'dialog' ), importSummary( resp ) );
 					}
 				} else if ( $btn.data( 'patch-site-rows' ) ) {
-					// Patch site-level value inputs inline by entity type+id+field
-					var missedSite = 0;
-					$.each( resp.data.rows || [], function ( _, row ) {
-						$.each( row.fields, function ( field, val ) {
-							if ( val === '' ) return;
-							var $input = $( '.lsb-value-input[data-entity-type="' + row.entity_type + '"][data-entity-id="' + row.entity_id + '"][data-field="' + field + '"]' );
-							if ( $input.length ) {
-								$input.val( val ).data( 'initial-value', val );
-								$input.closest( 'tr' ).removeClass( 'lsb-dirty' );
-							} else {
-								missedSite++;
-							}
-						} );
+					// Site-level import: patch inline, reload if any row missed
+					var missed = patchInputRows( resp.data.rows, function ( row, field ) {
+						return '.lsb-value-input[data-entity-type="' + row.entity_type + '"][data-entity-id="' + row.entity_id + '"][data-field="' + field + '"]';
 					} );
-					var dialogSelSite = $btn.data( 'dialog' );
-					if ( missedSite > 0 ) {
+					if ( missed > 0 ) {
 						setTimeout( function () { location.reload(); }, 600 );
 					} else {
-						setTimeout( function () {
-							if ( dialogSelSite ) { $( dialogSelSite ).hide(); }
-							showAdminNotice( 'Importé : ' + resp.data.imported + ' — Ignoré : ' + resp.data.skipped, 'success' );
-						}, 500 );
+						closeDialogAndNotify( $btn.data( 'dialog' ), importSummary( resp ) );
 					}
 				} else if ( reloadOnSuccess && resp.data.imported > 0 ) {
-					var dialogSel2 = $btn.data( 'dialog' );
+					// Address import: flat DOM patch, reload only if no rows returned
 					if ( resp.data.rows && resp.data.rows.length ) {
 						$.each( resp.data.rows, function ( _, row ) {
 							$.each( [ 'ville', 'code_postal', 'adresse', 'departement' ], function ( _, field ) {
@@ -548,10 +561,7 @@
 								}
 							} );
 						} );
-						setTimeout( function () {
-							if ( dialogSel2 ) { $( dialogSel2 ).hide(); }
-							showAdminNotice( 'Importé : ' + resp.data.imported + ' — Ignoré : ' + resp.data.skipped, 'success' );
-						}, 500 );
+						closeDialogAndNotify( $btn.data( 'dialog' ), importSummary( resp ) );
 					} else {
 						setTimeout( function () { location.reload(); }, 800 );
 					}
@@ -601,7 +611,7 @@
 		} );
 	} );
 
-}( jQuery, wp ) );
+}( jQuery ) );
 
 // =====================================================================
 // Section 13: Network scope select-all sync (vanilla JS, no jQuery)
