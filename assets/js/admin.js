@@ -651,4 +651,47 @@
 			} );
 		}
 	} );
+
 }() );
+
+// ─── Toggle-all in settings cards ─────────────────────────────────────────
+( function ( $ ) {
+
+	function syncToggleAll( $card ) {
+		var $boxes  = $card.find( 'input[type="checkbox"]:not(.lsb-toggle-all-cb)' );
+		var total   = $boxes.length;
+		var checked = $boxes.filter( ':checked' ).length;
+		$card.find( '.lsb-toggle-all-cb' ).prop( 'checked', total > 0 && total === checked );
+	}
+
+	$( document ).on( 'change', '.lsb-toggle-all-cb', function () {
+		var checked = $( this ).prop( 'checked' );
+		$( this ).closest( '.lsb-settings-card' )
+			.find( 'input[type="checkbox"]:not(.lsb-toggle-all-cb)' )
+			.prop( 'checked', checked );
+	} );
+
+	$( document ).on( 'change', '.lsb-settings-card input[type="checkbox"]:not(.lsb-toggle-all-cb)', function () {
+		syncToggleAll( $( this ).closest( '.lsb-settings-card' ) );
+	} );
+
+	$( function () {
+		$( '.lsb-settings-card' ).each( function () {
+			syncToggleAll( $( this ) );
+		} );
+	} );
+
+}( jQuery ) );
+
+// ─── Confirmation reset réseau ─────────────────────────────────────────────
+( function ( $ ) {
+	$( document ).on( 'submit', '#lsb-reset-form', function ( e ) {
+		var withSites = $( this ).find( 'input[name="lsb_reset_include_sites"]' ).is( ':checked' );
+		var msg = withSites
+			? 'Supprimer toutes les données réseau ET les réglages locaux de chaque site ? Cette action est irréversible.'
+			: 'Supprimer toutes les données réseau ? Cette action est irréversible.';
+		if ( ! window.confirm( msg ) ) {
+			e.preventDefault();
+		}
+	} );
+}( jQuery ) );

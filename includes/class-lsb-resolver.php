@@ -36,7 +36,8 @@ class LSB_Resolver {
 		if ( $entity ) {
 			$local = $this->meta_store->get( $entity, $field );
 			if ( ! empty( $local ) ) {
-				return [ 'raw' => (string) $local, 'tier' => 1, 'scope' => null ];
+				$scope = $this->scope_matcher->get_scope_for_object( $object );
+				return [ 'raw' => (string) $local, 'tier' => 1, 'scope' => $scope ];
 			}
 		}
 

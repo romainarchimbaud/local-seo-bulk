@@ -28,6 +28,7 @@ class LSB_Plugin {
 	public $network_scope_page;
 	public $network_editor_page;
 	public $network_address_page;
+	public $network_settings_page;
 
 	public static function instance() {
 		if ( null === self::$instance ) {
@@ -66,6 +67,7 @@ class LSB_Plugin {
 		require_once $inc . 'class-lsb-network-scope-page.php';
 		require_once $inc . 'class-lsb-network-editor-page.php';
 		require_once $inc . 'class-lsb-network-address-page.php';
+		require_once $inc . 'class-lsb-network-settings-page.php';
 	}
 
 	private function instantiate() {
@@ -84,9 +86,10 @@ class LSB_Plugin {
 		$this->ajax              = new LSB_Ajax( $this->meta_store, $this->token_resolver, $this->network_store, $this->scope_matcher, $this->resolver, $this->network_entity_index, $this->csv_handler );
 		$this->editor_page       = new LSB_Editor_Page( $this->meta_store, $this->token_resolver, $this->network_store, $this->scope_matcher, $this->resolver );
 		$this->admin_menu        = new LSB_Admin_Menu( $this->settings, $this->editor_page );
-		$this->network_scope_page   = new LSB_Network_Scope_Page( $this->network_store, $this->network_cpt_index );
-		$this->network_editor_page  = new LSB_Network_Editor_Page( $this->network_store, $this->network_entity_index, $this->token_resolver );
-		$this->network_address_page = new LSB_Network_Address_Page();
+		$this->network_scope_page    = new LSB_Network_Scope_Page( $this->network_store, $this->network_cpt_index );
+		$this->network_editor_page   = new LSB_Network_Editor_Page( $this->network_store, $this->network_entity_index, $this->token_resolver );
+		$this->network_address_page  = new LSB_Network_Address_Page();
+		$this->network_settings_page = new LSB_Network_Settings_Page( $this->network_store, $this->network_cpt_index );
 	}
 
 	private function boot() {
@@ -98,12 +101,25 @@ class LSB_Plugin {
 		$this->network_scope_page->init();
 		$this->network_editor_page->init();
 		$this->network_address_page->init();
+		$this->network_settings_page->init();
 
 		$this->admin_menu->init();
 		$this->settings->init();
 
 		add_action( 'admin_enqueue_scripts',         [ $this, 'enqueue_admin_assets' ] );
 		add_action( 'network_admin_enqueue_scripts',  [ $this, 'enqueue_admin_assets' ] );
+		add_action( 'admin_init',                    [ $this, 'snapshot_site_cpts' ] );
+	}
+
+	public function snapshot_site_cpts() {
+		if ( is_network_admin() ) return;
+		$pt = array_keys( get_post_types( [ 'public' => true ] ) );
+		unset( $pt[ array_search( 'attachment', $pt, true ) ] );
+		$tx = array_keys( get_taxonomies( [ 'public' => true ] ) );
+		update_site_option( 'lsb_site_cpts_' . get_current_blog_id(), [
+			'post_types' => array_values( $pt ),
+			'taxonomies' => array_values( $tx ),
+		] );
 	}
 
 	public function enqueue_admin_assets( $hook ) {

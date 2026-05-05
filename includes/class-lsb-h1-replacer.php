@@ -18,6 +18,7 @@ class LSB_H1_Replacer {
 	}
 
 	public function maybe_start_buffer() {
+		if ( ! empty( get_site_option( 'lsb_network_kill_switch', 0 ) ) ) return;
 		if ( ! empty( get_option( 'lsb_site_kill_switch', 0 ) ) ) return;
 
 		$object = $this->resolver->get_current_object();
@@ -29,6 +30,9 @@ class LSB_H1_Replacer {
 		if ( null !== $raw['scope'] ) {
 			$scope_id       = $raw['scope']['id'] ?? '';
 			$site_overrides = get_option( 'lsb_site_scope_h1_overrides', false );
+			if ( false === $site_overrides ) {
+				$site_overrides = get_site_option( 'lsb_network_scope_h1_overrides', false );
+			}
 
 			if ( false !== $site_overrides ) {
 				// Site-level override saved: takes precedence over network flag.
@@ -40,6 +44,9 @@ class LSB_H1_Replacer {
 		} else {
 			// No scope (including tier 1 local overrides): check site-level force-H1 types.
 			$force_types = get_option( 'lsb_h1_force_types', false );
+			if ( false === $force_types ) {
+				$force_types = get_site_option( 'lsb_network_h1_force_types', false );
+			}
 			if ( false !== $force_types ) {
 				if ( $object instanceof WP_Post && ! in_array( $object->post_type, $force_types, true ) ) return;
 				if ( $object instanceof WP_Term && ! in_array( $object->taxonomy, $force_types, true ) ) return;
