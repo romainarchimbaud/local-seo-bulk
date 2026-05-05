@@ -23,16 +23,41 @@ class LSB_Network_CPT_Index {
 		if ( is_multisite() ) {
 			$sites = get_sites( [ 'fields' => 'ids', 'number' => 0 ] );
 			foreach ( $sites as $site_id ) {
-				switch_to_blog( $site_id );
-				$collected = $this->collect_site_types( true );
-				$post_types += $collected['post_types'];
-				$taxonomies += $collected['taxonomies'];
-				restore_current_blog();
+				$snapshot = get_site_option( 'lsb_site_cpts_' . $site_id, null );
+				if ( is_array( $snapshot ) ) {
+					foreach ( $snapshot['post_types'] ?? [] as $slug ) {
+						if ( ! isset( $post_types[ $slug ] ) ) {
+							$post_types[ $slug ] = [ 'slug' => $slug, 'label' => $slug ];
+						}
+					}
+					foreach ( $snapshot['taxonomies'] ?? [] as $slug ) {
+						if ( ! isset( $taxonomies[ $slug ] ) ) {
+							$taxonomies[ $slug ] = [ 'slug' => $slug, 'label' => $slug ];
+						}
+					}
+				} else {
+					// Fallback for sites not yet visited: switch_to_blog (same-theme sites only).
+					switch_to_blog( $site_id );
+					$collected = $this->collect_site_types( true );
+					$post_types += $collected['post_types'];
+					$taxonomies += $collected['taxonomies'];
+					restore_current_blog();
+				}
 			}
 		} else {
 			$collected = $this->collect_site_types( false );
 			$post_types = $collected['post_types'];
 			$taxonomies = $collected['taxonomies'];
+		}
+
+		// Enrich labels using currently registered types where available.
+		foreach ( array_keys( $post_types ) as $slug ) {
+			$obj = get_post_type_object( $slug );
+			if ( $obj ) $post_types[ $slug ]['label'] = $obj->labels->name;
+		}
+		foreach ( array_keys( $taxonomies ) as $slug ) {
+			$obj = get_taxonomy( $slug );
+			if ( $obj ) $taxonomies[ $slug ]['label'] = $obj->labels->name;
 		}
 
 		ksort( $post_types );
@@ -49,7 +74,7 @@ class LSB_Network_CPT_Index {
 		$post_types = [];
 		$taxonomies = [];
 
-		foreach ( get_post_types( [ 'show_ui' => true ], 'objects' ) as $pt ) {
+		foreach ( get_post_types( [ 'public' => true ], 'objects' ) as $pt ) {
 			if ( 'attachment' === $pt->name ) continue;
 			if ( ! $skip_duplicates || ! isset( $post_types[ $pt->name ] ) ) {
 				$post_types[ $pt->name ] = [
@@ -58,7 +83,7 @@ class LSB_Network_CPT_Index {
 				];
 			}
 		}
-		foreach ( get_taxonomies( [ 'show_ui' => true ], 'objects' ) as $tax ) {
+		foreach ( get_taxonomies( [ 'public' => true ], 'objects' ) as $tax ) {
 			if ( ! $skip_duplicates || ! isset( $taxonomies[ $tax->name ] ) ) {
 				$taxonomies[ $tax->name ] = [
 					'slug'  => $tax->name,

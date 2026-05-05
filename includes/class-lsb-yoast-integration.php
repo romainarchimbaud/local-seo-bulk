@@ -64,6 +64,7 @@ class LSB_Yoast_Integration {
 	}
 
 	private function is_killed() {
-		return ! empty( get_option( 'lsb_site_kill_switch', 0 ) );
+		return ! empty( get_site_option( 'lsb_network_kill_switch', 0 ) )
+			|| ! empty( get_option( 'lsb_site_kill_switch', 0 ) );
 	}
 }
