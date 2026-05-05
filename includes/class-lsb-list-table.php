@@ -11,21 +11,21 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
 
 class LSB_List_Table extends WP_List_Table {
 
-	private $field;
-	private $meta_store;
-	private $token_resolver;
-	private $resolver;
-	private $scope_id;
-	private $all_entities = [];
-	private $top_nav_rendered   = false;
-	private $rendering_top_nav = false;
+	private string $field;
+	private LSB_Meta_Store $meta_store;
+	private LSB_Token_Resolver $token_resolver;
+	private ?LSB_Resolver $resolver;
+	private string $scope_id;
+	private array $all_entities = [];
+	private bool $top_nav_rendered   = false;
+	private bool $rendering_top_nav = false;
 
 	public function __construct(
-		$field,
+		string $field,
 		LSB_Meta_Store $meta_store,
 		LSB_Token_Resolver $token_resolver,
 		LSB_Resolver $resolver = null,
-		$scope_id = ''
+		string $scope_id = ''
 	) {
 		parent::__construct( [
 			'singular' => 'lsb_item',
@@ -86,14 +86,14 @@ class LSB_List_Table extends WP_List_Table {
 		$this->top_nav_rendered = true;
 	}
 
-	protected function display_tablenav( $which ) {
+	protected function display_tablenav( $which ): void {
 		if ( 'top' === $which && $this->top_nav_rendered ) {
 			return;
 		}
 		parent::display_tablenav( $which );
 	}
 
-	public function set_entities( $entities ) {
+	public function set_entities( array $entities ) {
 		$this->all_entities = $entities;
 	}
 
@@ -109,7 +109,7 @@ class LSB_List_Table extends WP_List_Table {
 
 	public function column_default( $item, $column_name ) { return ''; }
 
-	public function column_entity_title( $item ) {
+	public function column_entity_title( array $item ) {
 		return sprintf(
 			'<a href="%s"><strong>%s</strong></a><br><span class="row-actions"><a href="%s">%s</a> | <a href="%s" target="_blank">%s</a></span>',
 			esc_url( $item['edit_url'] ),
@@ -121,7 +121,7 @@ class LSB_List_Table extends WP_List_Table {
 		);
 	}
 
-	public function column_entity_slug( $item ) {
+	public function column_entity_slug( array $item ) {
 		$full_url = $item['url'] ?? '';
 		if ( ! $full_url ) {
 			return '<span style="color:#999">—</span>';
@@ -134,11 +134,11 @@ class LSB_List_Table extends WP_List_Table {
 		);
 	}
 
-	public function column_entity_type( $item ) {
+	public function column_entity_type( array $item ) {
 		return esc_html( $item['type_label'] );
 	}
 
-	public function column_current_value( $item ) {
+	public function column_current_value( array $item ) {
 		$html = '';
 		foreach ( [ 'h1', 'title', 'desc' ] as $fk ) {
 			$val    = $item['current_values'][ $fk ] ?? '';
@@ -150,14 +150,14 @@ class LSB_List_Table extends WP_List_Table {
 		return $html;
 	}
 
-	public function column_network_pattern( $item ) {
+	public function column_network_pattern( array $item ) {
 		$raw  = $item['network_pattern'] ?? '';
 		$tier = $item['network_tier'] ?? 0;
 		if ( '' === $raw ) return '<span class="lsb-current-value" style="color:#999">—</span>';
 		return '<span class="lsb-current-value">' . esc_html( $raw ) . '</span>';
 	}
 
-	public function column_local_value( $item ) {
+	public function column_local_value( array $item ) {
 		$entity = $item['entity'];
 		$html   = '';
 
@@ -196,16 +196,16 @@ class LSB_List_Table extends WP_List_Table {
 		return $html;
 	}
 
-	public function column_actions( $item ) {
+	public function column_actions( array $item ) {
 		$entity   = $item['entity'];
 		$save_btn = sprintf(
-			'<button type="button" class="button lsb-save-row" data-entity-type="%s" data-entity-id="%d">%s</button>',
+			'<button type="button" class="button lsb-save-row" data-action="lsb_save_all" data-entity-type="%s" data-entity-id="%d">%s</button>',
 			esc_attr( $entity['type'] ),
 			(int) $entity['id'],
 			esc_html__( 'Enregistrer', 'local-seo-bulk' )
 		);
 		$clear_btn = sprintf(
-			'<button type="button" class="button-link lsb-clear-row" data-entity-type="%s" data-entity-id="%d" data-field="%s">%s</button>',
+			'<button type="button" class="button-link lsb-clear-row" data-action="lsb_save_all" data-entity-type="%s" data-entity-id="%d" data-field="%s">%s</button>',
 			esc_attr( $entity['type'] ),
 			(int) $entity['id'],
 			esc_attr( $this->field ),

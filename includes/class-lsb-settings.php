@@ -174,7 +174,7 @@ class LSB_Settings {
 
                     <?php if (! empty($scopes)) : ?>
                         <div class="lsb-type-group">
-                            <h3><?php esc_html_e('Scopes réseau', 'local-seo-bulk'); ?></h3>
+                            <h3><?php esc_html_e('Règles globales', 'local-seo-bulk'); ?></h3>
                             <div class="lsb-checkbox-grid">
                                 <?php foreach ($scopes as $sid => $scope) : ?>
                                     <label class="lsb-checkbox-label">
@@ -222,7 +222,7 @@ class LSB_Settings {
             <!-- ─── Forcer le H1 ─────────────────────────────────── -->
             <div class="lsb-settings-card" id="lsb-force-h1-card">
                 <h2><?php esc_html_e('Forcer le H1', 'local-seo-bulk'); ?></h2>
-                <p class="description"><?php esc_html_e('Activer le remplacement automatique du H1 pour ces types, même sans scope réseau configuré.', 'local-seo-bulk'); ?></p>
+                <p class="description"><?php esc_html_e('Activer le remplacement automatique du H1 pour ces types, même sans règle globale configurée.', 'local-seo-bulk'); ?></p>
 
                 <form method="post" action="options.php" style="margin-top:1em">
                     <?php settings_fields('lsb_h1_force_types_group'); ?>

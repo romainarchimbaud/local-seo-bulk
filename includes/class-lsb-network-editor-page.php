@@ -86,8 +86,9 @@ class LSB_Network_Editor_Page {
             'nonce'  => wp_create_nonce( 'lsb_ajax_nonce' ),
         ], admin_url( 'admin-ajax.php' ) );
         $template_url = add_query_arg( [
-            'action' => 'lsb_network_csv_template',
-            'nonce'  => wp_create_nonce( 'lsb_ajax_nonce' ),
+            'action'    => 'lsb_network_csv_template',
+            'nonce'     => wp_create_nonce( 'lsb_ajax_nonce' ),
+            'lsb_scope' => $active_scope,
         ], admin_url( 'admin-ajax.php' ) );
 
         wp_enqueue_script('lsb-admin');
@@ -111,73 +112,10 @@ class LSB_Network_Editor_Page {
                 </p>
                 <input type="file" id="lsb-network-csv-file" accept=".csv" style="display:block;margin:1.5em 0.5em;">
                 <input type="hidden" id="lsb-network-import-nonce" value="<?php echo esc_attr(wp_create_nonce('lsb_ajax_nonce')); ?>">
-                <button type="button" class="button button-primary" id="lsb-do-network-import"><?php esc_html_e('Importer', 'local-seo-bulk'); ?></button>
-                <button type="button" class="button" id="lsb-close-network-import"><?php esc_html_e('Annuler', 'local-seo-bulk'); ?></button>
+                <button type="button" class="button button-primary lsb-do-import" id="lsb-do-network-import" data-action="lsb_import_network_csv" data-dialog="#lsb-network-import-dialog" data-file-field="#lsb-network-csv-file" data-nonce-field="#lsb-network-import-nonce" data-result="#lsb-network-import-result" data-reload-on-missed="1" data-patch-rows="1" data-empty-msg="<?php esc_attr_e( 'Veuillez sélectionner un fichier CSV.', 'local-seo-bulk' ); ?>"><?php esc_html_e('Importer', 'local-seo-bulk'); ?></button>
+                <button type="button" class="button lsb-panel-close" id="lsb-close-network-import" data-target="#lsb-network-import-dialog"><?php esc_html_e('Annuler', 'local-seo-bulk'); ?></button>
                 <p id="lsb-network-import-result" style="margin-top:.5em"></p>
             </div>
-
-            <script>
-                (function($) {
-                    $(function() {
-                        $('#lsb-open-network-import').on('click', function() {
-                            $('#lsb-network-import-dialog').toggle();
-                        });
-                        $('#lsb-close-network-import').on('click', function() {
-                            $('#lsb-network-import-dialog').hide();
-                        });
-                        $('#lsb-do-network-import').on('click', function() {
-                            var file = $('#lsb-network-csv-file')[0].files[0];
-                            if (!file) {
-                                alert(<?php echo json_encode(__('Veuillez sélectionner un fichier CSV.', 'local-seo-bulk')); ?>);
-                                return;
-                            }
-                            var fd = new FormData();
-                            fd.append('action', 'lsb_import_network_csv');
-                            fd.append('nonce', $('#lsb-network-import-nonce').val());
-                            fd.append('lsb_csv', file);
-                            $('#lsb-do-network-import').prop('disabled', true);
-                            $.ajax({
-                                url: <?php echo json_encode(admin_url('admin-ajax.php')); ?>,
-                                type: 'POST',
-                                data: fd,
-                                processData: false,
-                                contentType: false,
-                            }).done(function(resp) {
-                                if (resp.success) {
-                                    $('#lsb-network-import-result').text(
-                                        <?php echo json_encode(__('Importé : ', 'local-seo-bulk')); ?> + resp.data.imported +
-                                        <?php echo json_encode(__(' — Ignoré : ', 'local-seo-bulk')); ?> + resp.data.skipped
-                                    );
-                                    var missed = 0;
-                                    $.each(resp.data.rows || [], function(_, row) {
-                                        $.each(row.fields, function(field, val) {
-                                            if (val === '') return;
-                                            var $input = $('.lsb-network-input[data-scope="' + row.scope_id + '"][data-slug="' + row.slug + '"][data-field="' + field + '"]');
-                                            if ($input.length) {
-                                                $input.val(val).data('initial-value', val);
-                                                $input.closest('tr').removeClass('lsb-dirty');
-                                            } else {
-                                                missed++;
-                                            }
-                                        });
-                                    });
-                                    if (missed > 0) {
-                                        setTimeout(function() {
-                                            location.reload();
-                                        }, 600);
-                                    }
-                                } else {
-                                    $('#lsb-network-import-result').text(resp.data.message || <?php echo json_encode(__('Erreur.', 'local-seo-bulk')); ?>);
-                                }
-                            }).fail(function() {
-                                $('#lsb-network-import-result').text(<?php echo json_encode(__('Erreur réseau.', 'local-seo-bulk')); ?>);
-                            }).always(function() {
-                                $('#lsb-do-network-import').prop('disabled', false);
-                            });
-                        });
-                    }); // document ready
-                })(jQuery);
-            </script>
 
             <?php if (isset($_GET['index_refreshed'])) : ?>
                 <div class="notice notice-success is-dismissible">
@@ -196,7 +134,7 @@ class LSB_Network_Editor_Page {
                     <?php endforeach; ?>
                 </nav>
                 <div class="lsb-scope-actions">
-                    <button type="button" class="button" id="lsb-open-network-import"><?php esc_html_e('Importer CSV', 'local-seo-bulk'); ?></button>
+                    <button type="button" class="button lsb-panel-toggle" id="lsb-open-network-import" data-target="#lsb-network-import-dialog"><?php esc_html_e('Importer CSV', 'local-seo-bulk'); ?></button>
                     <a href="<?php echo esc_url( $export_url ); ?>" class="button"><?php esc_html_e('Exporter CSV', 'local-seo-bulk'); ?></a>
                     <a href="<?php echo esc_url( $template_url ); ?>" class="button"><?php esc_html_e('Télécharger le modèle', 'local-seo-bulk'); ?></a>
                     <button type="button" class="button button-primary" id="lsb-save-all"><?php esc_html_e('Tout enregistrer', 'local-seo-bulk'); ?></button>
@@ -272,7 +210,7 @@ class LSB_Network_Editor_Page {
                                         <strong><?php echo esc_html($row['sample_title']); ?></strong>
                                     </td>
                                     <td>
-                                        <code style="font-size:.85em;color:#666"><?php echo esc_html($slug); ?></code>
+                                        <code style="font-size:.85em;color:#666"><?php echo esc_html( $row['url_path'] ?? $slug ); ?></code>
                                     </td>
                                     <td style="color:#999;font-size:.85em;white-space:nowrap">
                                         <?php echo count($row['sites']); ?> sites
@@ -308,11 +246,13 @@ class LSB_Network_Editor_Page {
                                     <td>
                                         <div class="lsb-actions-wrap">
                                             <button type="button" class="button lsb-save-network-row"
+                                                data-action="lsb_save_network_all"
                                                 data-scope="<?php echo esc_attr($active_scope); ?>"
                                                 data-slug="<?php echo esc_attr($slug); ?>">
                                                 <?php esc_html_e('Enregistrer', 'local-seo-bulk'); ?>
                                             </button>
                                             <button type="button" class="button-link lsb-clear-network-row"
+                                                data-action="lsb_save_network_row"
                                                 data-scope="<?php echo esc_attr($active_scope); ?>"
                                                 data-slug="<?php echo esc_attr($slug); ?>"
                                                 data-field="<?php echo esc_attr($active_field); ?>">

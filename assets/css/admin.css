@@ -34,13 +34,18 @@
     margin-top: .5em;
 }
 
+/* Shared bottom padding for scope actions and field meta */
+.lsb-scope-tabs-bar .lsb-scope-actions,
+.lsb-field-meta {
+    padding: 0 0 8px 1em;
+}
+
 /* Scope tabs bar: scope tabs left, save button right */
 .lsb-scope-tabs-bar .lsb-scope-actions {
     flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 0 0 8px 1em;
 }
 
 /* Gap between scope tabs bar and field tabs bar */
@@ -53,7 +58,6 @@
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    padding: 0 0 8px 1em;
     font-size: 13px;
     color: #646970;
 }
@@ -114,6 +118,7 @@
 
 #lsb-editor-form .wp-list-table {
     border-top: none;
+    width: 100%;
 }
 
 .lsb-type-slug {
@@ -262,11 +267,6 @@
 
 /* Table */
 
-#lsb-editor-form .wp-list-table {
-    width: 100%;
-}
-
-
 #lsb-editor-form .column-entity_type {
     width: 120px;
 }
@@ -284,9 +284,8 @@
     width: 200px;
 }
 
-#lsb-editor-form .lsb-actions-wrap {
+.lsb-actions-wrap {
     display: flex;
-    flex-direction: row;
     align-items: center;
     gap: 8px;
 }
@@ -296,8 +295,6 @@
 }
 
 #lsb-address-form .lsb-actions-wrap {
-    display: flex;
-    align-items: center;
     gap: 10px;
 }
 

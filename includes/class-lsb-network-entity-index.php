@@ -49,8 +49,16 @@ class LSB_Network_Entity_Index {
 					if ( ! $slug ) continue;
 					$title = $obj instanceof WP_Post ? get_the_title( $obj ) : $obj->name;
 					if ( ! isset( $index[ $scope_id ][ $slug ] ) ) {
+						if ( $obj instanceof WP_Post ) {
+							$permalink = get_permalink( $obj );
+							$url_path  = $permalink ? wp_parse_url( $permalink, PHP_URL_PATH ) : $slug;
+						} else {
+							$term_link = get_term_link( $obj );
+							$url_path  = ! is_wp_error( $term_link ) ? wp_parse_url( $term_link, PHP_URL_PATH ) : $slug;
+						}
 						$index[ $scope_id ][ $slug ] = [
 							'slug'         => $slug,
+							'url_path'     => $url_path,
 							'sample_title' => $title,
 							'sites'        => [],
 						];
