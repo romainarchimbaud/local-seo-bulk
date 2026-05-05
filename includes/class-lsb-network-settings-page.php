@@ -68,18 +68,14 @@ class LSB_Network_Settings_Page {
         if (! current_user_can('manage_network_options')) wp_die(-1);
         check_admin_referer('lsb_reset_network_data');
 
-        // Network-level options.
-        $scopes = $this->network_store->get_scopes();
-        delete_site_option('lsb_scopes');
+        // Network-level options (use store constants for exact option names).
+        delete_site_option( LSB_Network_Store::OPT_SCOPES );
+        delete_site_option( LSB_Network_Store::OPT_ENTITY_VALUES );
         delete_site_option('lsb_network_seo_addresses');
         delete_site_option('lsb_network_editor_types');
         delete_site_option('lsb_network_h1_force_types');
         delete_site_option('lsb_network_scope_h1_overrides');
         delete_site_option('lsb_network_kill_switch');
-
-        foreach (array_keys($scopes) as $scope_id) {
-            delete_site_option('lsb_entity_' . $scope_id);
-        }
 
         // CPT snapshots and transients.
         delete_site_transient(LSB_Network_CPT_Index::TRANSIENT);
