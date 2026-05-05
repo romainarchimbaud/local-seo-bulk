@@ -106,9 +106,15 @@ class LSB_Plugin {
 		$this->admin_menu->init();
 		$this->settings->init();
 
+		add_filter( 'safe_style_css',                [ $this, 'allow_display_style' ] );
 		add_action( 'admin_enqueue_scripts',         [ $this, 'enqueue_admin_assets' ] );
 		add_action( 'network_admin_enqueue_scripts',  [ $this, 'enqueue_admin_assets' ] );
 		add_action( 'admin_init',                    [ $this, 'snapshot_site_cpts' ] );
+	}
+
+	public function allow_display_style( $styles ) {
+		$styles[] = 'display';
+		return $styles;
 	}
 
 	public function snapshot_site_cpts() {
