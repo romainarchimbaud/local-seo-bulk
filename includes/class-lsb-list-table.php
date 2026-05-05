@@ -151,10 +151,20 @@ class LSB_List_Table extends WP_List_Table {
 	}
 
 	public function column_network_pattern( array $item ) {
-		$raw  = $item['network_pattern'] ?? '';
-		$tier = $item['network_tier'] ?? 0;
-		if ( '' === $raw ) return '<span class="lsb-current-value" style="color:#999">—</span>';
-		return '<span class="lsb-current-value">' . esc_html( $raw ) . '</span>';
+		$patterns = $item['network_pattern'] ?? [];
+		$html     = '';
+
+		foreach ( [ 'h1', 'title', 'desc' ] as $fk ) {
+			$raw    = $patterns[ $fk ] ?? '';
+			$hidden = $fk !== $this->field ? ' style="display:none"' : '';
+			$html  .= '<div class="lsb-field-panel" data-field="' . esc_attr( $fk ) . '"' . $hidden . '>';
+			$html  .= '' !== $raw
+				? '<span class="lsb-current-value">' . esc_html( $raw ) . '</span>'
+				: '<span class="lsb-current-value" style="color:#999">—</span>';
+			$html  .= '</div>';
+		}
+
+		return $html;
 	}
 
 	public function column_local_value( array $item ) {

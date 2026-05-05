@@ -283,10 +283,14 @@ class LSB_Editor_Page {
                 $scope_id = $scope ? $scope['id'] : '';
             }
 
-            $obj_slug = $this->scope_matcher->get_object_slug($obj);
-            $net_raw  = $scope_id
-                ? $this->resolver->resolve_network_raw($scope_id, $obj_slug, $active_tab)
-                : ['raw' => '', 'tier' => 0];
+            $obj_slug    = $this->scope_matcher->get_object_slug($obj);
+            $net_raw     = ['h1' => '', 'title' => '', 'desc' => ''];
+            if ($scope_id) {
+                foreach (['h1', 'title', 'desc'] as $fk) {
+                    $r          = $this->resolver->resolve_network_raw($scope_id, $obj_slug, $fk);
+                    $net_raw[$fk] = $r['raw'];
+                }
+            }
 
             if ($obj instanceof WP_Post) {
                 $entity   = ['type' => 'post', 'id' => $obj->ID];
@@ -321,8 +325,7 @@ class LSB_Editor_Page {
                 'current_values'  => $current_values,
                 'slug'            => $obj_slug,
                 'scope_id'        => $scope_id,
-                'network_pattern' => $net_raw['raw'],
-                'network_tier'    => $net_raw['tier'],
+                'network_pattern' => $net_raw,
             ];
         }
 

@@ -33,6 +33,11 @@ class LSB_Settings {
             'type'              => 'array',
             'sanitize_callback' => [$this, 'sanitize_h1_force_types'],
         ]);
+
+        register_setting('lsb_h1_force_types_group', 'lsb_site_scope_h1_overrides', [
+            'type'              => 'array',
+            'sanitize_callback' => [$this, 'sanitize_scope_h1_overrides'],
+        ]);
     }
 
     // --- Sanitize callbacks ---
@@ -46,6 +51,11 @@ class LSB_Settings {
     }
 
     public function sanitize_h1_force_types($input) {
+        if (! is_array($input)) return [];
+        return array_map('sanitize_key', $input);
+    }
+
+    public function sanitize_scope_h1_overrides($input) {
         if (! is_array($input)) return [];
         return array_map('sanitize_key', $input);
     }
@@ -228,14 +238,35 @@ class LSB_Settings {
                     <?php settings_fields('lsb_h1_force_types_group'); ?>
 
                     <?php
-                    $force_types_saved = get_option('lsb_h1_force_types', false);
-                    $active_pt         = $enabled_pt;
-                    $active_tax        = $enabled_tax;
+                    $force_types_saved     = get_option('lsb_h1_force_types', false);
+                    $scope_overrides_saved = get_option('lsb_site_scope_h1_overrides', false);
+                    $active_pt             = $enabled_pt;
+                    $active_tax            = $enabled_tax;
                     // Default: all active types checked when option has never been saved.
                     $force_types = (false !== $force_types_saved)
                         ? $force_types_saved
                         : array_merge($active_pt, $active_tax);
                     ?>
+
+                    <?php if (! empty($scopes)) : ?>
+                        <div class="lsb-type-group">
+                            <h3><?php esc_html_e('Règles globales', 'local-seo-bulk'); ?></h3>
+                            <div class="lsb-checkbox-grid">
+                                <?php foreach ($scopes as $sid => $scope) :
+                                    $checked = (false !== $scope_overrides_saved)
+                                        ? in_array($sid, $scope_overrides_saved, true)
+                                        : ($scope['replace_h1'] ?? true);
+                                ?>
+                                    <label class="lsb-checkbox-label">
+                                        <input type="checkbox" name="lsb_site_scope_h1_overrides[]"
+                                               value="<?php echo esc_attr($sid); ?>"
+                                               <?php checked($checked); ?>>
+                                        <?php echo esc_html($scope['label']); ?>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
 
                     <?php if (! empty($active_pt)) : ?>
                         <div class="lsb-type-group" id="lsb-force-h1-post-types">

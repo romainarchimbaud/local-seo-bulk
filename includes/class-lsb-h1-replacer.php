@@ -27,8 +27,16 @@ class LSB_H1_Replacer {
 		if ( empty( $raw['raw'] ) ) return;
 
 		if ( null !== $raw['scope'] ) {
-			// Object is covered by a scope: respect the scope's replace_h1 flag.
-			if ( isset( $raw['scope']['replace_h1'] ) && false === $raw['scope']['replace_h1'] ) return;
+			$scope_id       = $raw['scope']['id'] ?? '';
+			$site_overrides = get_option( 'lsb_site_scope_h1_overrides', false );
+
+			if ( false !== $site_overrides ) {
+				// Site-level override saved: takes precedence over network flag.
+				if ( ! in_array( $scope_id, $site_overrides, true ) ) return;
+			} else {
+				// No site override: respect the network scope's replace_h1 flag.
+				if ( isset( $raw['scope']['replace_h1'] ) && false === $raw['scope']['replace_h1'] ) return;
+			}
 		} else {
 			// No scope (including tier 1 local overrides): check site-level force-H1 types.
 			$force_types = get_option( 'lsb_h1_force_types', false );
