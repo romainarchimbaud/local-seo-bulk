@@ -60,7 +60,7 @@ class LSB_H1_Replacer {
 		ob_start( function( $html ) use ( $h1 ) {
 			return preg_replace(
 				'/(<h1\b[^>]*>).*?(<\/h1>)/is',
-				'$1' . esc_html( $h1 ) . '$2',
+				'$1' . wp_kses_post( $h1 ) . '$2',
 				$html,
 				1
 			);

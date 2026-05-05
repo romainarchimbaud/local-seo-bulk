@@ -69,7 +69,9 @@ class LSB_Ajax {
 		$field       = sanitize_key( $_POST['field']       ?? '' );
 		$entity_type = sanitize_key( $_POST['entity_type'] ?? '' );
 		$entity_id   = (int) ( $_POST['entity_id']         ?? 0 );
-		$value       = sanitize_text_field( wp_unslash( $_POST['value'] ?? '' ) );
+		$value       = ( 'h1' === $field )
+			? wp_kses_post( wp_unslash( $_POST['value'] ?? '' ) )
+			: sanitize_text_field( wp_unslash( $_POST['value'] ?? '' ) );
 
 		if ( ! $field || ! $entity_type || ! $entity_id ) {
 			wp_send_json_error( [ 'message' => __( 'Paramètres invalides.', 'local-seo-bulk' ) ] );
@@ -98,7 +100,9 @@ class LSB_Ajax {
 			$field       = sanitize_key( $row['field']       ?? '' );
 			$entity_type = sanitize_key( $row['entity_type'] ?? '' );
 			$entity_id   = (int) ( $row['entity_id']         ?? 0 );
-			$value       = sanitize_text_field( wp_unslash( $row['value'] ?? '' ) );
+			$value       = ( 'h1' === $field )
+				? wp_kses_post( wp_unslash( $row['value'] ?? '' ) )
+				: sanitize_text_field( wp_unslash( $row['value'] ?? '' ) );
 			if ( ! $field || ! $entity_type || ! $entity_id ) continue;
 			$entity = [ 'type' => $entity_type, 'id' => $entity_id ];
 			if ( '' === $value ) {
@@ -116,7 +120,7 @@ class LSB_Ajax {
 
 	public function preview_token() {
 		$this->verify_nonce();
-		$value    = sanitize_text_field( wp_unslash( $_POST['value'] ?? '' ) );
+		$value    = wp_kses_post( wp_unslash( $_POST['value'] ?? '' ) );
 		$resolved = $this->token_resolver->resolve( $value );
 		wp_send_json_success( [ 'resolved' => $resolved ] );
 	}
@@ -129,7 +133,9 @@ class LSB_Ajax {
 		$scope_id = sanitize_key( $_POST['scope_id'] ?? '' );
 		$slug     = sanitize_text_field( wp_unslash( $_POST['slug'] ?? '' ) );
 		$field    = sanitize_key( $_POST['field'] ?? '' );
-		$value    = sanitize_text_field( wp_unslash( $_POST['value'] ?? '' ) );
+		$value    = ( 'h1' === $field )
+			? wp_kses_post( wp_unslash( $_POST['value'] ?? '' ) )
+			: sanitize_text_field( wp_unslash( $_POST['value'] ?? '' ) );
 
 		if ( ! $scope_id || ! $slug || ! $field ) {
 			wp_send_json_error( [ 'message' => __( 'Paramètres invalides.', 'local-seo-bulk' ) ] );
@@ -157,7 +163,9 @@ class LSB_Ajax {
 			$scope_id = sanitize_key( $row['scope_id'] ?? '' );
 			$slug     = sanitize_text_field( wp_unslash( $row['slug'] ?? '' ) );
 			$field    = sanitize_key( $row['field'] ?? '' );
-			$value    = sanitize_text_field( wp_unslash( $row['value'] ?? '' ) );
+			$value    = ( 'h1' === $field )
+				? wp_kses_post( wp_unslash( $row['value'] ?? '' ) )
+				: sanitize_text_field( wp_unslash( $row['value'] ?? '' ) );
 			if ( ! $scope_id || ! $slug || ! $field ) continue;
 			if ( '' === $value ) {
 				$this->network_store->delete_entity_field( $scope_id, $slug, $field );

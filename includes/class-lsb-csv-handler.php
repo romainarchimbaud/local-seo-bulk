@@ -83,7 +83,7 @@ class LSB_CSV_Handler {
 			if ( empty( $row[0] ) || str_starts_with( trim( $row[0] ), '#' ) ) continue;
 
 			$slug  = trim( $row[0] );
-			$h1    = isset( $row[1] ) ? sanitize_text_field( wp_unslash( trim( $row[1] ) ) ) : '';
+			$h1    = isset( $row[1] ) ? wp_kses_post( wp_unslash( trim( $row[1] ) ) ) : '';
 			$title = isset( $row[2] ) ? sanitize_text_field( wp_unslash( trim( $row[2] ) ) ) : '';
 			$desc  = isset( $row[3] ) ? sanitize_text_field( wp_unslash( trim( $row[3] ) ) ) : '';
 
@@ -369,7 +369,7 @@ class LSB_CSV_Handler {
 			$slug      = str_starts_with( $raw_slug, '/' )
 				? sanitize_title( basename( rtrim( $raw_slug, '/' ) ) )
 				: sanitize_title( $raw_slug );
-			$h1       = sanitize_text_field( wp_unslash( trim( $row[2] ?? '' ) ) );
+			$h1       = wp_kses_post( wp_unslash( trim( $row[2] ?? '' ) ) );
 			$title    = sanitize_text_field( wp_unslash( trim( $row[3] ?? '' ) ) );
 			$desc     = sanitize_text_field( wp_unslash( trim( $row[4] ?? '' ) ) );
 
