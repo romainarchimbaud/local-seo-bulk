@@ -188,6 +188,6 @@ local-seo-bulk/
 
 ## Notes
 
-- Plugin développé pour le réseau Decostory (intérieur/décoration)
+- Plugin développé pour multisite WP
 - Non destiné à être publié sur le répertoire WordPress.org
 - Testé avec Yoast SEO, ACF Pro, WordPress multisite
