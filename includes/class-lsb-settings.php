@@ -62,22 +62,22 @@ class LSB_Settings {
         return array_map('sanitize_key', $input);
     }
 
-	// --- Reset handlers ---
+    // --- Reset handlers ---
 
     public function handle_reset_site_types() {
-        if ( ! current_user_can('manage_options') ) wp_die(-1);
+        if (! current_user_can('manage_options')) wp_die(-1);
         check_admin_referer('lsb_reset_site_types');
         delete_option('lsb_editor_types');
-        wp_safe_redirect( admin_url('admin.php?page=lsb-settings&reset_types=1') );
+        wp_safe_redirect(admin_url('admin.php?page=lsb-settings&reset_types=1'));
         exit;
     }
 
     public function handle_reset_site_h1() {
-        if ( ! current_user_can('manage_options') ) wp_die(-1);
+        if (! current_user_can('manage_options')) wp_die(-1);
         check_admin_referer('lsb_reset_site_h1');
         delete_option('lsb_h1_force_types');
         delete_option('lsb_site_scope_h1_overrides');
-        wp_safe_redirect( admin_url('admin.php?page=lsb-settings&reset_h1=1') );
+        wp_safe_redirect(admin_url('admin.php?page=lsb-settings&reset_h1=1'));
         exit;
     }
 
@@ -88,7 +88,7 @@ class LSB_Settings {
      */
     public function get_editor_types() {
         $site = get_option('lsb_editor_types', false);
-        if ( false !== $site ) return $site;
+        if (false !== $site) return $site;
         return get_site_option('lsb_network_editor_types', false);
     }
 
@@ -123,11 +123,15 @@ class LSB_Settings {
         <div class="wrap lsb-settings-wrap">
             <h1><?php esc_html_e('Réglages — Local SEO Bulk', 'local-seo-bulk'); ?></h1>
 
-            <?php if ( isset($_GET['reset_types']) ) : ?>
-                <div class="notice notice-success is-dismissible"><p><?php esc_html_e('Types actifs réinitialisés vers la config réseau.', 'local-seo-bulk'); ?></p></div>
+            <?php if (isset($_GET['reset_types'])) : ?>
+                <div class="notice notice-success is-dismissible">
+                    <p><?php esc_html_e('Types actifs réinitialisés vers la config réseau.', 'local-seo-bulk'); ?></p>
+                </div>
             <?php endif; ?>
-            <?php if ( isset($_GET['reset_h1']) ) : ?>
-                <div class="notice notice-success is-dismissible"><p><?php esc_html_e('Forcer le H1 réinitialisé vers la config réseau.', 'local-seo-bulk'); ?></p></div>
+            <?php if (isset($_GET['reset_h1'])) : ?>
+                <div class="notice notice-success is-dismissible">
+                    <p><?php esc_html_e('Forcer le H1 réinitialisé vers la config réseau.', 'local-seo-bulk'); ?></p>
+                </div>
             <?php endif; ?>
 
             <!-- ─── Adresse SEO ──────────────────────────────── -->
@@ -185,27 +189,32 @@ class LSB_Settings {
                     </thead>
                     <tbody>
                         <tr>
-                            <td><code>[lsb_ville]</code></td>
-                            <td><code>%%lsb_ville%%</code></td>
-                            <td><code>%%lsb_ville%%</code></td>
+                            <td>[lsb_nom_site]</td>
+                            <td>%%lsb_nom_site%%</td>
+                            <td>%%lsb_nom_site%%</td>
                         </tr>
                         <tr>
-                            <td><code>[lsb_code_postal]</code></td>
-                            <td><code>%%lsb_code_postal%%</code></td>
-                            <td><code>%%lsb_code_postal%%</code></td>
+                            <td>[lsb_ville]</td>
+                            <td>%%lsb_ville%%</td>
+                            <td>%%lsb_ville%%</td>
                         </tr>
                         <tr>
-                            <td><code>[lsb_adresse]</code></td>
-                            <td><code>%%lsb_adresse%%</code></td>
-                            <td><code>%%lsb_adresse%%</code></td>
+                            <td>[lsb_code_postal]</td>
+                            <td>%%lsb_code_postal%%</td>
+                            <td>%%lsb_code_postal%%</td>
                         </tr>
                         <tr>
-                            <td><code>[lsb_departement]</code></td>
-                            <td><code>%%lsb_departement%%</code></td>
-                            <td><code>%%lsb_departement%%</code></td>
+                            <td>[lsb_adresse]</td>
+                            <td>%%lsb_adresse%%</td>
+                            <td>%%lsb_adresse%%</td>
                         </tr>
                         <tr>
-                            <td><code>[lsb_h1]</code></td>
+                            <td>[lsb_departement]</td>
+                            <td>%%lsb_departement%%</td>
+                            <td>%%lsb_departement%%</td>
+                        </tr>
+                        <tr>
+                            <td>[lsb_h1]</td>
                             <td>—</td>
                             <td>—</td>
                         </tr>
@@ -224,15 +233,15 @@ class LSB_Settings {
                 </h2>
                 <p class="description"><?php esc_html_e('Cochez les types à afficher dans la liste déroulante de l\'éditeur.', 'local-seo-bulk'); ?></p>
 
-                <?php if ( ! $this->site_has_editor_types_override() && false !== get_site_option('lsb_network_editor_types', false) ) : ?>
+                <?php if (! $this->site_has_editor_types_override() && false !== get_site_option('lsb_network_editor_types', false)) : ?>
                     <p class="notice notice-info inline" style="padding:.5em .75em;margin:.5em 0 1em"><?php esc_html_e('Ces réglages héritent de la configuration réseau.', 'local-seo-bulk'); ?></p>
-                <?php elseif ( $this->site_has_editor_types_override() ) : ?>
+                <?php elseif ($this->site_has_editor_types_override()) : ?>
                     <p style="margin:.5em 0 1em">
-                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline">
-                            <input type="hidden" name="action" value="lsb_reset_site_types">
-                            <?php wp_nonce_field('lsb_reset_site_types'); ?>
-                            <button type="submit" class="button button-small"><?php esc_html_e('Réinitialiser vers config réseau', 'local-seo-bulk'); ?></button>
-                        </form>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline">
+                        <input type="hidden" name="action" value="lsb_reset_site_types">
+                        <?php wp_nonce_field('lsb_reset_site_types'); ?>
+                        <button type="submit" class="button button-small"><?php esc_html_e('Réinitialiser vers config réseau', 'local-seo-bulk'); ?></button>
+                    </form>
                     </p>
                 <?php endif; ?>
 
@@ -297,15 +306,15 @@ class LSB_Settings {
                 </h2>
                 <p class="description"><?php esc_html_e('Activer le remplacement automatique du H1 pour ces types, même sans règle globale configurée.', 'local-seo-bulk'); ?></p>
 
-                <?php if ( ! $this->site_has_h1_override() && ( false !== get_site_option('lsb_network_h1_force_types', false) || false !== get_site_option('lsb_network_scope_h1_overrides', false) ) ) : ?>
+                <?php if (! $this->site_has_h1_override() && (false !== get_site_option('lsb_network_h1_force_types', false) || false !== get_site_option('lsb_network_scope_h1_overrides', false))) : ?>
                     <p class="notice notice-info inline" style="padding:.5em .75em;margin:.5em 0 1em"><?php esc_html_e('Ces réglages héritent de la configuration réseau.', 'local-seo-bulk'); ?></p>
-                <?php elseif ( $this->site_has_h1_override() ) : ?>
+                <?php elseif ($this->site_has_h1_override()) : ?>
                     <p style="margin:.5em 0 1em">
-                        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline">
-                            <input type="hidden" name="action" value="lsb_reset_site_h1">
-                            <?php wp_nonce_field('lsb_reset_site_h1'); ?>
-                            <button type="submit" class="button button-small"><?php esc_html_e('Réinitialiser vers config réseau', 'local-seo-bulk'); ?></button>
-                        </form>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="display:inline">
+                        <input type="hidden" name="action" value="lsb_reset_site_h1">
+                        <?php wp_nonce_field('lsb_reset_site_h1'); ?>
+                        <button type="submit" class="button button-small"><?php esc_html_e('Réinitialiser vers config réseau', 'local-seo-bulk'); ?></button>
+                    </form>
                     </p>
                 <?php endif; ?>
 
@@ -322,18 +331,18 @@ class LSB_Settings {
                     $network_h1_scopes = get_site_option('lsb_network_scope_h1_overrides', false);
 
                     // Resolution chain: site option → network option → all active types.
-                    if ( false !== $force_types_saved ) {
+                    if (false !== $force_types_saved) {
                         $force_types = $force_types_saved;
-                    } elseif ( false !== $network_h1_types ) {
+                    } elseif (false !== $network_h1_types) {
                         $force_types = $network_h1_types;
                     } else {
-                        $force_types = array_merge( $active_pt, $active_tax );
+                        $force_types = array_merge($active_pt, $active_tax);
                     }
 
                     // Resolution chain for scope overrides: site → network → scope default.
-                    $scope_overrides_resolved = ( false !== $scope_overrides_saved )
+                    $scope_overrides_resolved = (false !== $scope_overrides_saved)
                         ? $scope_overrides_saved
-                        : ( ( false !== $network_h1_scopes ) ? $network_h1_scopes : null );
+                        : ((false !== $network_h1_scopes) ? $network_h1_scopes : null);
                     ?>
 
                     <?php if (! empty($scopes)) : ?>
@@ -341,14 +350,14 @@ class LSB_Settings {
                             <h3><?php esc_html_e('Règles globales', 'local-seo-bulk'); ?></h3>
                             <div class="lsb-checkbox-grid">
                                 <?php foreach ($scopes as $sid => $scope) :
-                                    $checked = ( null !== $scope_overrides_resolved )
-                                        ? in_array( $sid, $scope_overrides_resolved, true )
-                                        : ( $scope['replace_h1'] ?? true );
+                                    $checked = (null !== $scope_overrides_resolved)
+                                        ? in_array($sid, $scope_overrides_resolved, true)
+                                        : ($scope['replace_h1'] ?? true);
                                 ?>
                                     <label class="lsb-checkbox-label">
                                         <input type="checkbox" name="lsb_site_scope_h1_overrides[]"
-                                               value="<?php echo esc_attr($sid); ?>"
-                                               <?php checked($checked); ?>>
+                                            value="<?php echo esc_attr($sid); ?>"
+                                            <?php checked($checked); ?>>
                                         <?php echo esc_html($scope['label']); ?>
                                     </label>
                                 <?php endforeach; ?>
